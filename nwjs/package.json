@@ -1,0 +1,11 @@
+{
+  "name": "ViUR shell call",
+  "main": "http://localhost:8080/vi/s/main.html#shell",
+  "node-remote": "http://localhost:8080",
+  "window":
+  {
+	"title": "ViUR Shell Test",
+	"width": 1024,
+	"height": 768
+  }
+}
