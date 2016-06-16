@@ -65,6 +65,24 @@ function shell(command, notifier)
         });
 }
 
+function spawn(cmd, params, stdout, stderr, close)
+{
+    var spawn = require("child_process").spawn;
+    var child = spawn(cmd, params);
+
+    if( stdout )
+        child.stdout.on("data", stdout);
+
+    if( stderr )
+        child.stderr.on("data", stderr);
+
+    if( close )
+        child.on("close", close);
+
+    return child;
+}
+
+global.spawn = spawn;
 global.shell = shell;
 global.readFile = readFile;
 global.quit = quit;
