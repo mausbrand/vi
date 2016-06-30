@@ -9,15 +9,17 @@ from priorityqueue import toplevelActionSelector
 class TopBarWidget( html5.Header ):
 
 	def getConf(self):
-		NetworkService.request( None, "/admin/config", successHandler=self.onCompletion,
-					failureHandler=self.onError, cacheable=True )
+		NetworkService.request(None, "/vi/config",
+		                        successHandler=self.onCompletion,
+								failureHandler=self.onError,
+                                cacheable=True )
 
 	def onCompletion(self, req):
 		data = NetworkService.decode(req)
-		if "configuration" in data.keys() and isinstance( data["configuration"], dict):
+		if "configuration" in data.keys() and isinstance(data["configuration"], dict):
 			if "vi.name" in data["configuration"].keys():
 				self.modulH1.appendChild(html5.TextNode(data["configuration"]["vi.name"]))
-			#self.logoContainer["style"]["background-image"]="url('"+data["configuration"]["vi.logo"]+"')"
+
 	def onError(self, req, code):
 		print("ONERROR")
 

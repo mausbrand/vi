@@ -354,11 +354,12 @@ class EditWidget( html5.Div ):
 		"""
 		self.wasInitialRequest = not len(data)>0
 
-		if self.module=="_tasks":
-			NetworkService.request( None, "/admin/%s/execute/%s" % ( self.module, self.key ), data,
+		if self.module == "_tasks":
+			NetworkService.request(self.module, "execute/%s" % self.key, data,
 			                        secure=len(data)>0,
 			                        successHandler=self.setData,
 			                        failureHandler=self.showErrorMsg)
+
 		elif self.applicationType == EditWidget.appList: ## Application: List
 			if self.key and (not self.clone or not data):
 				NetworkService.request(self.module,"edit/%s" % self.key, data,
@@ -370,6 +371,7 @@ class EditWidget( html5.Div ):
 				                       secure=len(data)>0,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg )
+
 		elif self.applicationType == EditWidget.appHierarchy: ## Application: Hierarchy
 			if self.key and (not self.clone or not data):
 				NetworkService.request(self.module,"edit/%s" % self.key, data,
@@ -381,6 +383,7 @@ class EditWidget( html5.Div ):
 				                       secure=len(data)>0,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg )
+
 		elif self.applicationType == EditWidget.appTree: ## Application: Tree
 			if self.key and not self.clone:
 				NetworkService.request(self.module,"edit/%s/%s" % (self.skelType,self.key), data,
@@ -392,11 +395,13 @@ class EditWidget( html5.Div ):
 				                       secure=len(data)>0,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
+
 		elif self.applicationType == EditWidget.appSingleton: ## Application: Singleton
 			NetworkService.request(self.module,"edit", data,
 			                       secure=len(data)>0,
 			                       successHandler=self.setData,
 			                       failureHandler=self.showErrorMsg)
+
 		else:
 			raise NotImplementedError() #Should never reach this
 

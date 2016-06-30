@@ -76,8 +76,10 @@ class AdminScreen(Screen):
 		super(AdminScreen, self).remove()
 
 	def startup(self):
-		NetworkService.request(None, "/vi/config", successHandler=self.postInit,
-								failureHandler=self.onError, cacheable=True)
+		NetworkService.request(None, "/vi/config",
+		                        successHandler=self.postInit,
+								failureHandler=self.onError,
+                                cacheable=True)
 
 	def log(self, type, msg ):
 		self.logWdg.log( type, msg )
