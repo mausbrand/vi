@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import html5, utils
 from config import conf
 from i18n import translate

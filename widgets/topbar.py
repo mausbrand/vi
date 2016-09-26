@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import html5
+
 from network import NetworkService
 from i18n import translate
 from config import conf
@@ -18,6 +19,7 @@ class TopBarWidget( html5.Header ):
 			if "vi.name" in data["configuration"].keys():
 				self.modulH1.appendChild(html5.TextNode(data["configuration"]["vi.name"]))
 			#self.logoContainer["style"]["background-image"]="url('"+data["configuration"]["vi.logo"]+"')"
+
 	def onError(self, req, code):
 		print("ONERROR")
 

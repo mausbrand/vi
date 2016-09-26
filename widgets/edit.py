@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-
 import html5, utils
-from html5.a import A
-from html5.form import Fieldset
-from html5.ext import YesNoDialog
 
 from network import NetworkService
 from config import conf
@@ -512,13 +508,13 @@ class EditWidget( html5.Div ):
 			if askHierarchyCloning and self.clone:
 				# for lists, which are rootNode entries of hierarchies, ask to clone entire hierarchy
 				if self.applicationType == EditWidget.appList and "rootNodeOf" in conf[ "modules" ][ self.module ]:
-					YesNoDialog( translate( u"Do you want to clone the entire hierarchy?" ),
-				                    yesCallback=self.doCloneHierarchy, noCallback=self.closeOrContinue )
+					html5.ext.YesNoDialog(translate(u"Do you want to clone the entire hierarchy?"),
+				                            yesCallback=self.doCloneHierarchy, noCallback=self.closeOrContinue)
 					return
 				# for cloning within a hierarchy, ask for cloning all subentries.
 				elif self.applicationType == EditWidget.appHierarchy:
-					YesNoDialog( translate( u"Do you want to clone all subentries of this item?" ),
-				                    yesCallback=self.doCloneHierarchy, noCallback=self.closeOrContinue )
+					html5.ext.YesNoDialog(translate(u"Do you want to clone all subentries of this item?"),
+				                            yesCallback=self.doCloneHierarchy, noCallback=self.closeOrContinue)
 					return
 
 			self.closeOrContinue()
@@ -656,7 +652,7 @@ class EditWidget( html5.Div ):
 				return
 		self.save( res )
 
-class fieldset_A(A):
+class fieldset_A(html5.A):
 	_baseClass = "a"
 
 	def __init__(self, *args, **kwargs):
@@ -665,7 +661,7 @@ class fieldset_A(A):
 
 	def onClick(self,event):
 		for element in self.parent().parent().parent()._children:
-			if isinstance(element,Fieldset):
+			if isinstance(element, html5.Fieldset):
 				if html5.utils.doesEventHitWidgetOrChildren(event, element):
 					if not "active" in element["class"]:
 						element["class"].append("active")

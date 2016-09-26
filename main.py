@@ -1,8 +1,7 @@
 #-*- coding: utf-8 -*-
-import html5, i18n, pyjd, network
-
-from login import LoginScreen
+import pyjd, html5, i18n, network
 from admin import AdminScreen
+from login import LoginScreen
 from config import conf
 
 try:

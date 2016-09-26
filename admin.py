@@ -1,5 +1,4 @@
 #-*- coding: utf-8 -*-
-
 import html5
 from config import conf
 from widgets import TopBarWidget

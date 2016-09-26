@@ -1,16 +1,12 @@
+import html5
+from html5.ext.button import Button
 from datetime import datetime
-from html5.div import Div
 from config import conf
-
-from html5.textnode import TextNode
-from html5.form import Input, Label, Select, Option
 from network import NetworkService
 from priorityqueue import viewDelegateSelector, actionDelegateSelector, extractorDelegateSelector
-from html5.ext.button import Button
-from html5.a import A
 from i18n import translate
 
-class CsvExport(Div):
+class CsvExport(html5.Div):
 	_batchSize = 99  # How many row we fetch at once
 
 	def __init__(self, parent):
@@ -28,8 +24,8 @@ class CsvExport(Div):
 		self.skelData = list()
 		self.cell_renderer = dict()
 		# Proxy some events and functions of the original table
-		self.emptyNotificationDiv = Div()
-		self.emptyNotificationDiv.appendChild(TextNode("Currently no entries"))
+		self.emptyNotificationDiv = html5.Div()
+		self.emptyNotificationDiv.appendChild(html5.TextNode("Currently no entries"))
 		self.emptyNotificationDiv["class"].append("emptynotification")
 		self.appendChild(self.emptyNotificationDiv)
 
@@ -38,13 +34,13 @@ class CsvExport(Div):
 		if "viur.defaultlangsvalues" in conf["server"].keys():
 			lngList = conf["server"]["viur.defaultlangsvalues"].items()
 
-			self.lang_select = Select()
+			self.lang_select = html5.Select()
 			self.lang_select["id"] = "lang-select"
 
-			label1 = Label(translate("Language selection"))
+			label1 = html5.Label(translate("Language selection"))
 			label1["for"] = "lang-select"
 
-			span1 = Div()
+			span1 = html5.Div()
 			span1.appendChild(label1)
 			span1.appendChild(self.lang_select)
 			span1["class"] = "bone"
@@ -52,7 +48,7 @@ class CsvExport(Div):
 			self.appendChild(span1)
 
 			for key, value in lngList:
-				aoption = Option()
+				aoption = html5.Option()
 				aoption["value"] = key
 				aoption.element.innerHTML = value
 				# self.appendChild(aoption)
@@ -63,25 +59,25 @@ class CsvExport(Div):
 			self.lang_select = None
 
 		# Encoding
-		self.encoding_select = Select()
+		self.encoding_select = html5.Select()
 		self.encoding_select["id"] = "encoding-select"
 
-		label2 = Label(translate("Encoding"))
+		label2 = html5.Label(translate("Encoding"))
 		label2["for"] = "encoding-select"
 
-		span2 = Div()
+		span2 = html5.Div()
 		span2.appendChild(label2)
 		span2.appendChild(self.encoding_select)
 		span2["class"] = "bone"
 		self.appendChild(span2)
 
-		tmp1 = Option()
+		tmp1 = html5.Option()
 		tmp1["value"] = "iso-8859-15"
 		tmp1["selected"] = True
 		tmp1.element.innerHTML = "ISO-8859-15"
 		self.encoding_select.appendChild(tmp1)
 
-		tmp2 = Option()
+		tmp2 = html5.Option()
 		tmp2["value"] = "utf-8"
 		tmp2.element.innerHTML = "UTF-8"
 		self.encoding_select.appendChild(tmp2)
@@ -121,14 +117,14 @@ class CsvExport(Div):
 		"""
 		self.actionBar["style"]["display"] = "none"
 		self.table["style"]["display"] = "none"
-		errorDiv = Div()
+		errorDiv = html5.Div()
 		errorDiv["class"].append("error_msg")
 		if code and (code == 401 or code == 403):
 			txt = "Access denied!"
 		else:
 			txt = "An unknown error occurred!"
 		errorDiv["class"].append("error_code_%s" % (code or 0))
-		errorDiv.appendChild(TextNode(txt))
+		errorDiv.appendChild(html5.TextNode(txt))
 		self.appendChild(errorDiv)
 
 	def reloadData(self):
@@ -212,7 +208,7 @@ class CsvExport(Div):
 				line = ";".join(values) + "\n"
 				resStr += line
 
-			tmpA = A()
+			tmpA = html5.A()
 			self.appendChild(tmpA)
 			encFunc = eval("encodeURIComponent")
 			escapeFunc = eval("escape")
