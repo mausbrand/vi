@@ -15,14 +15,14 @@ class BasicEditorAction(html5.ext.Button):
 
 class BasicTextAction(BasicEditorAction):
 	cmd = None
-	isActiveTag = None
 	title = None
+	isActiveTag = None
 
 	def __init__(self, *args, **kwargs):
-		assert self.cmd is not None
-		super( BasicTextAction, self ).__init__( self.cmd, *args, **kwargs )
-		self["class"] = "icon text style"
-		self["class"].append( self.cmd )
+		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
+
+		self.addClass("icon", "text", "style", self.cmd)
+
 		if self.title:
 			self["title"] = self.title
 
@@ -51,23 +51,23 @@ class BasicTextAction(BasicEditorAction):
 		pass
 
 
-class TextStyleBold( BasicTextAction ):
+class TextStyleBold(BasicTextAction):
 	cmd = "bold"
-	isActiveTag = "B"
+	isActiveTag = "STRONG"
 	title = translate("Bold")
 
-	#def onClick(self, sender = None):
-	#	self.parent().parent().editor.toggleSelection("strong")
+	def onClick(self, sender = None):
+		self.parent().parent().editor.toggleSelection("strong", "fBold")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.bold", TextStyleBold )
 
-class TextStyleItalic( BasicTextAction ):
+class TextStyleItalic(BasicTextAction):
 	cmd = "italic"
-	isActiveTag = "I"
+	isActiveTag = "EM"
 	title = translate("Italic")
 
-	#def onClick(self, sender=None):
-	#	self.parent().parent().editor.toggleSelection("em")
+	def onClick(self, sender=None):
+		self.parent().parent().editor.toggleSelection("em", "fItalic")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
 
@@ -186,8 +186,6 @@ class TextRemoveFormat( BasicTextAction ):
 			node = node.parentNode
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
-
-
 
 
 
@@ -899,46 +897,85 @@ class Editor(html5.Div):
 	#		print("br")
 	#		return False
 
-	def toggleSelection(self, tagName):
+	def toggleSelection(self, tagName, className = None):
 		"""
 		This was a test...
 		"""
 
-		sel = eval("window.top.document.getSelection()")
-		range = sel.getRangeAt(0)
-		current = range.extractContents()
+		def dump(obj):
+			try:
+				print("obj", obj)
+				print("type", obj.nodeType)
+				print("child", obj.childElementCount)
 
-		try:
-			print(current)
-			print(current.nodeType)
-			print(current.tagName)
-		except:
-			pass
+				div = html5.Div()
+				div.element.appendChild(obj.cloneNode(True))
+				print("html", div.element.innerHTML)
+				print("children", div.element.childNodes.length)
+				print("children[1]", obj.childNodes.length)
+			except:
+				pass
 
-		if current.nodeType == 11 and current.firstElementChild: #DocumentFragment
-			current = current.firstElementChild
+		def getChildren(node):
+			children = []
+			child = node.firstChild
 
-		try:
-			print(current)
-			print(current.nodeType)
-			print(current.tagName)
-		except:
-			pass
+			while child:
+				children.append(child)
+				child = child.nextSibling
 
-		if current and current.nodeType == 1 and str(current.tagName).upper() == tagName.upper():
+			return children
+
+		off = False
+
+		s = eval("window.top.document.getSelection()")
+		r = s.getRangeAt(0)
+		current = r.extractContents()
+
+		children = []
+
+		if current:
+			for child in getChildren(current):
+				if child.nodeType == 1 and str(child.tagName).upper() == tagName.upper():
+					if current.childNodes.length == 1:
+						off = True
+						children = getChildren(child)
+						break
+					else:
+						children.extend(getChildren(child))
+				else:
+					children.append(child)
+
+			# Optimzing.
+			if not off and all([child.nodeType == 1 and str(child.tagName).upper() == tagName.upper() for child in children]):
+				nchildren = []
+				for child in children:
+					nchildren.extend(getChildren(child))
+
+				children = nchildren
+				off = True
+
+		if off:
 			print("Toggle OFF")
 
-			if current.hasChildNodes():
-				while current.firstChild:
-					range.insertNode(current.firstChild)
+			for child in reversed(children):
+				r.insertNode(child)
 
 		else:
 			print("Toggle ON")
 
 			new = eval("window.top.document.createElement(\"%s\")" % tagName)
-			new.appendChild(current)
 
-			range.insertNode(new)
+			if className:
+				new.className = "vitxt-%s" % className
+
+			for child in children:
+				new.appendChild(child)
+
+			r.insertNode(new)
+
+		s.removeAllRanges()
+		s.addRange(r)
 
 		print("%s done" % tagName)
 
