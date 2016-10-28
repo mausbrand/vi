@@ -7,6 +7,7 @@ import re
 from config import conf
 from widgets.file import FileWidget
 from i18n import translate
+from network import DeferredCall
 
 class BasicEditorAction(html5.ext.Button):
 
@@ -17,177 +18,137 @@ class BasicTextAction(BasicEditorAction):
 	cmd = None
 	title = None
 	isActiveTag = None
+	qclass = None
+	qvalue = None
 
 	def __init__(self, *args, **kwargs):
 		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
 
 		self.addClass("icon", "text", "style", self.cmd)
 
+		if self.qclass:
+			self.addClass("ql-%s" % self.qclass)
+
+		if self.qvalue:
+			self["value"] = self.qvalue
+
 		if self.title:
 			self["title"] = self.title
 
-	def onAttach(self):
-		super(BasicTextAction, self).onAttach( )
-		if self.isActiveTag:
-			self.parent().parent().cursorMovedEvent.register( self )
-
-	def onDetach(self):
-		super(BasicTextAction, self).onDetach( )
-		if self.isActiveTag:
-			self.parent().parent().cursorMovedEvent.unregister( self )
-
-	def onCursorMoved(self, nodeStack):
-		if self.isActiveTag in [(x.tagName if "tagName" in dir(x) else "") for x in nodeStack]:
-			if not "isactive" in self["class"]:
-				self["class"].append("isactive")
-		else:
-			if "isactive" in self["class"]:
-				self["class"].remove("isactive")
-
-	def onClick(self, sender=None):
-		self.execCommand(self.cmd)
-
-	def resetLoadingState(self):
-		pass
-
 
 class TextStyleBold(BasicTextAction):
-	cmd = "bold"
-	isActiveTag = "STRONG"
+	qclass = cmd = "bold"
 	title = translate("Bold")
-
-	def onClick(self, sender = None):
-		self.parent().parent().editor.toggleSelection("strong", "fBold")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.bold", TextStyleBold )
 
 class TextStyleItalic(BasicTextAction):
-	cmd = "italic"
-	isActiveTag = "EM"
+	qclass = cmd = "italic"
 	title = translate("Italic")
-
-	def onClick(self, sender=None):
-		self.parent().parent().editor.toggleSelection("em", "fItalic")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
 
-
-class BasicFormatBlockAction( BasicTextAction ):
-	def onClick(self, sender=None):
-		self.execCommand("formatBlock", self.cmd)
-
-class TextStyleH1( BasicFormatBlockAction ):
+class TextStyleH1(BasicTextAction):
 	cmd = "H1"
+	qclass = "header"
+	qvalue = "1"
+
 	title = translate("H1")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h1", TextStyleH1 )
 
-class TextStyleH2( BasicFormatBlockAction ):
+class TextStyleH2(BasicTextAction):
 	cmd = "H2"
+	qclass = "header"
+	qvalue = "2"
 	title = translate("H2")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h2", TextStyleH2 )
 
-class TextStyleH3( BasicFormatBlockAction ):
+class TextStyleH3(BasicTextAction):
 	cmd = "H3"
+	qclass = "header"
+	qvalue = "3"
 	title = translate("H3")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h3", TextStyleH3 )
 
-class TextStyleH4( BasicFormatBlockAction ):
+class TextStyleH4(BasicTextAction):
 	cmd = "H4"
+	qclass = "header"
+	qvalue = "4"
 	title = translate("H4")
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h4", TextStyleH4 )
 
-class TextStyleH5( BasicFormatBlockAction ):
-	cmd = "H5"
-	title = translate("H5")
-
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h5", TextStyleH5 )
-
-class TextStyleH6( BasicFormatBlockAction ):
-	cmd = "H6"
-	title = translate("H6")
-
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h6", TextStyleH6 )
-
-
-class TextStyleBlockQuote( BasicFormatBlockAction ):
+class TextStyleBlockQuote(BasicTextAction):
 	cmd = "BLOCKQUOTE"
+	qclass = "blockquote"
 	title = translate("Blockqoute")
-#actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.blockquote", TextStyleBlockQuote )
 
+actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.blockquote", TextStyleBlockQuote )
 
-class TextStyleJustifyCenter( BasicTextAction ):
+class TextStyleJustifyCenter(BasicTextAction):
 	cmd = "justifyCenter"
+	qclass = "align"
+	qvalue = "center"
 	title = translate("Justifiy Center")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyCenter", TextStyleJustifyCenter )
 
-class TextStyleJustifyLeft( BasicTextAction ):
+class TextStyleJustifyLeft(BasicTextAction):
 	cmd = "justifyLeft"
+	qclass = "align"
+	qvalue = ""
 	title = translate("Justifiy Left")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyLeft", TextStyleJustifyLeft )
 
-class TextStyleJustifyRight( BasicTextAction ):
+class TextStyleJustifyRight(BasicTextAction):
 	cmd = "justifyRight"
+	qclass = "align"
+	qvalue = "right"
 	title = translate("Justifiy Right")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyRight", TextStyleJustifyRight )
 
 
-
-class TextInsertOrderedList( BasicTextAction ):
+class TextInsertOrderedList(BasicTextAction):
 	cmd = "insertOrderedList"
+	qclass = "list"
+	qvalue = "ordered"
 	title = translate("Insert an ordered List")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.orderedList", TextInsertOrderedList )
 
-class TextInsertUnorderedList( BasicTextAction ):
+class TextInsertUnorderedList(BasicTextAction):
 	cmd = "insertUnorderedList"
+	qclass = "list"
+	qvalue = "bullet"
 	title = translate("Insert an unordered List")
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.unorderedList", TextInsertUnorderedList )
 
-
-
-
-class TextIndent( BasicTextAction ):
-	cmd = "indent"
+class TextIndent(BasicTextAction):
+	qclass = cmd = "indent"
+	qvalue = "+1"
 	title = translate("Indent more")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.indent", TextIndent )
 
-
-class TextOutdent( BasicTextAction ):
+class TextOutdent(BasicTextAction):
 	cmd = "outdent"
+	qclass = "indent"
+	qvalue = "-1"
 	title = translate("Indent less")
+
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.outdent", TextOutdent )
 
-
-
-class TextRemoveFormat( BasicTextAction ):
+class TextRemoveFormat(BasicTextAction):
 	cmd = "removeformat"
+	qclass = "clean"
 	title = translate("Remove all formatting")
 
-	def onClick(self, sender=None):
-		self.execCommand(self.cmd)
-
-		node = eval("window.top.getSelection().anchorNode")
-
-		i = 10
-		while i>0 and node and node != self.parent().parent().editor.element:
-			i -= 1
-
-			if not "tagName" in dir( node ):
-				node = node.parentNode
-				continue
-
-			if node.tagName in ["H%s" % x for x in range(0,6)]:
-				self.execCommand("formatBlock", "div")
-				return
-
-			node = node.parentNode
-
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
-
-
 
 class TextInsertImageAction(BasicEditorAction):
 	def __init__(self, *args, **kwargs):
@@ -223,7 +184,7 @@ class TextInsertImageAction(BasicEditorAction):
 		pass
 
 actionDelegateSelector.insert( 1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
-
+'''
 class TextInsertLinkAction(BasicEditorAction):
 	newLinkIdx = 0
 	def __init__(self, *args, **kwargs):
@@ -249,8 +210,9 @@ class TextInsertLinkAction(BasicEditorAction):
 		pass
 
 actionDelegateSelector.insert( 1, TextInsertLinkAction.isSuitableFor, TextInsertLinkAction )
+'''
 
-
+'''
 class CreateTablePopup( html5.ext.Popup ):
 	def __init__(self, targetNode, *args, **kwargs ):
 		super( CreateTablePopup, self ).__init__( *args, **kwargs )
@@ -623,6 +585,7 @@ class TableRemoveColAction( html5.ext.Button ):
 		pass
 
 actionDelegateSelector.insert( 1, TableRemoveColAction.isSuitableFor, TableRemoveColAction )
+'''
 
 class TextSaveAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -836,15 +799,21 @@ class ImageEditor( html5.Div ):
 		self.linkTxt.focus()
 
 
-class TextUndoAction( BasicTextAction ):
+class TextUndoAction(BasicTextAction):
 	cmd = "undo"
 	title = translate("Undo the last action")
+
+	def onClick(self, sender = None):
+		self.parent().parent().editor.quill.history.undo()
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.undo", TextUndoAction )
 
 class TextRedoAction( BasicTextAction ):
 	cmd = "redo"
 	title = translate("Redo the last undone action")
+
+	def onClick(self, sender=None):
+		self.parent().parent().editor.quill.history.redo()
 
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.redo", TextRedoAction )
 
@@ -879,105 +848,55 @@ class FlipViewAction( html5.ext.Button ):
 		pass
 actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.flipView", FlipViewAction )
 
-class Editor(html5.Div):
-	def __init__(self, html, *args, **kwargs ):
-		super(Editor, self).__init__(*args, **kwargs)
 
-		self["contenteditable"] = True
+
+
+def dumpNode(obj):
+	try:
+		print("obj", obj)
+		print("type", obj.nodeType)
+		print("child", obj.childElementCount)
+
+		div = html5.Div()
+		div.element.appendChild(obj.cloneNode(True))
+		print("html", div.element.innerHTML)
+		print("children", div.element.childNodes.length)
+		print("children[1]", obj.childNodes.length)
+	except:
+		print("ERROR DUMPING %s" % obj)
+
+
+class Editor(html5.Div):
+	__editorCount__ = 0
+
+	def __init__(self, parent, html, *args, **kwargs ):
+		super(Editor, self).__init__(*args, **kwargs)
 		self.addClass("contentdiv")
 
+		self["id"] = "wysiwyg%d" % Editor.__editorCount__
+		Editor.__editorCount__ += 1
+
 		self.initial_txt = self.element.innerHTML = html
-		self.sinkEvent("onBlur", "onFocus", "onKeyDown")
+		self.sinkEvent("onBlur", "onFocus")
+		parent.appendChild(self)
+
+		DeferredCall(self.init)
+
+	def init(self):
+		self.quill = eval("""
+			new window.top.quill("#%s",
+				{
+
+					modules:
+					{
+						toolbar: "#%s",
+					}
+				})
+			""" % (self["id"], self.parent().actionbar["id"]))
+
 
 	def changed(self):
 		return self.initial_txt != self.element.innerHTML
-
-	#def onKeyDown(self, e):
-	#	if e.keyCode == 13:
-	#		print("br")
-	#		return False
-
-	def toggleSelection(self, tagName, className = None):
-		"""
-		This was a test...
-		"""
-
-		def dump(obj):
-			try:
-				print("obj", obj)
-				print("type", obj.nodeType)
-				print("child", obj.childElementCount)
-
-				div = html5.Div()
-				div.element.appendChild(obj.cloneNode(True))
-				print("html", div.element.innerHTML)
-				print("children", div.element.childNodes.length)
-				print("children[1]", obj.childNodes.length)
-			except:
-				pass
-
-		def getChildren(node):
-			children = []
-			child = node.firstChild
-
-			while child:
-				children.append(child)
-				child = child.nextSibling
-
-			return children
-
-		off = False
-
-		s = eval("window.top.document.getSelection()")
-		r = s.getRangeAt(0)
-		current = r.extractContents()
-
-		children = []
-
-		if current:
-			for child in getChildren(current):
-				if child.nodeType == 1 and str(child.tagName).upper() == tagName.upper():
-					if current.childNodes.length == 1:
-						off = True
-						children = getChildren(child)
-						break
-					else:
-						children.extend(getChildren(child))
-				else:
-					children.append(child)
-
-			# Optimzing.
-			if not off and all([child.nodeType == 1 and str(child.tagName).upper() == tagName.upper() for child in children]):
-				nchildren = []
-				for child in children:
-					nchildren.extend(getChildren(child))
-
-				children = nchildren
-				off = True
-
-		if off:
-			print("Toggle OFF")
-
-			for child in reversed(children):
-				r.insertNode(child)
-
-		else:
-			print("Toggle ON")
-
-			new = eval("window.top.document.createElement(\"%s\")" % tagName)
-
-			if className:
-				new.className = "vitxt-%s" % className
-
-			for child in children:
-				new.appendChild(child)
-
-			r.insertNode(new)
-
-		s.removeAllRanges()
-		s.addRange(r)
-
-		print("%s done" % tagName)
 
 	def execCommand(self, commandName, valueArgument=None):
 		"""
@@ -1036,9 +955,8 @@ class Wysiwyg( html5.Div ):
 		self.imgEditor = ImageEditor()
 		self.appendChild(self.imgEditor)
 
-		self.editor = Editor(editHtml)
+		self.editor = Editor(self, editHtml)
 
-		self.appendChild( self.editor )
 		self.actionbar.setActions( self.textActions )
 		#btn = html5.ext.Button("Apply", self.saveText)
 		#btn["class"].append("icon apply")
@@ -1128,103 +1046,5 @@ class Wysiwyg( html5.Div ):
 	def abortText(self, *args, **kwargs):
 		self.abortTextEvent.fire(self)
 
-	def onMouseDown(self, event):
-		self.lastMousePos = None
-		if event.target.tagName=="IMG":
-			offsetLeft = event.pageX-event.target.offsetLeft
-			offsetTop = event.pageY-event.target.offsetTop
-			if event.target.offsetParent is not None:
-				offsetLeft -= event.target.offsetParent.offsetLeft
-				offsetTop -= event.target.offsetParent.offsetTop
-			if offsetLeft>0.8*event.target.clientWidth and offsetTop>0.8*event.target.clientHeight:
-				self.currentImage = event.target
-			self.imgEditor.doOpen( event.target )
-			self.discardNextClickEvent = True
-			event.preventDefault()
-			event.stopPropagation()
-		else:
-			self.currentImage = None
-			super( Wysiwyg, self ).onMouseDown(event)
-
-		node = eval("window.top.getSelection().anchorNode")
-
-		while node and node != self.editor.element:
-			#FIXME.. emit cursormoved event
-			node = node.parentNode
-
-	def onMouseUp(self, event):
-		self.currentImage = None
-		self.lastMousePos = None
-		super( Wysiwyg, self ).onMouseUp(event)
-
-	def onMouseMove(self, event):
-		if event.target.tagName=="IMG":
-			offsetLeft = event.pageX-event.target.offsetLeft
-			offsetTop = event.pageY-event.target.offsetTop
-			if event.target.offsetParent is not None:
-				offsetLeft -= event.target.offsetParent.offsetLeft
-				offsetTop -= event.target.offsetParent.offsetTop
-			if offsetLeft>0.8*event.target.clientWidth and offsetTop>0.8*event.target.clientHeight:
-				self.cursorImage = event.target
-				self.cursorImage.style.cursor = "se-resize"
-			else:
-				if self.cursorImage is not None:
-					self.cursorImage.style.cursor = "default"
-					self.cursorImage = None
-		elif self.cursorImage is not None:
-			self.cursorImage.style.cursor = "default"
-			self.cursorImage = None
-		if self.currentImage is not None and event.target.tagName=="IMG" and self.currentImage==event.target:
-			if self.lastMousePos is None:
-				self.lastMousePos = (event.x, event.y)
-				return
-			x,y = self.lastMousePos
-			self.lastMousePos = (event.x, event.y)
-			event.target.width = event.target.clientWidth-(x-event.x)
-			event.target.height = event.target.clientHeight-(y-event.y)
-			event.preventDefault()
-			event.stopPropagation()
-		else:
-			self.lastMousePos = None
-			self.currentImage = None
-			super( Wysiwyg, self ).onMouseMove(event)
-
-
-	def onClick(self, event):
-		if self.discardNextClickEvent:
-			self.discardNextClickEvent = False
-			return
-
-		super(Wysiwyg, self).onClick( event )
-		domWdg = event.target
-		isEditorTarget = False
-
-		while domWdg:
-			if domWdg==self.editor.element:
-				isEditorTarget = True
-				break
-			domWdg = domWdg.parentNode
-
-		if not isEditorTarget:
-			return
-
-		node = eval("window.top.getSelection().anchorNode")
-		nodeStack = []
-		i = 10
-
-		#Try to extract the relevant nodes from the dom
-		while i>0 and node and node != self.editor.element:
-			i -= 1
-			nodeStack.append(node)
-			node = node.parentNode
-
-		if "TABLE" in [(x.tagName if "tagName" in dir(x) else "") for x in nodeStack]:
-			self.tableDiv["style"]["display"] = ""
-		else:
-			self.tableDiv["style"]["display"] = "none"
-
-		self.linkEditor.onCursorMoved(nodeStack)
-		self.imgEditor.onCursorMoved(nodeStack)
-		self.cursorMovedEvent.fire( nodeStack )
 
 
