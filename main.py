@@ -35,7 +35,9 @@ class Application(html5.Div):
 	def startupSuccess(self, req):
 		conf["mainConfig"] = network.NetworkService.decode(req)
 
-		self.adminScreen = AdminScreen()
+		if not self.adminScreen:
+			self.adminScreen = AdminScreen()
+
 		self.adminScreen.invoke()
 
 	def startupFailure(self, req, err):
@@ -51,13 +53,10 @@ class Application(html5.Div):
 		self.loginScreen.invoke(logout=logout)
 
 	def admin(self):
-		if not self.adminScreen:
-			self.adminScreen = AdminScreen()
-
 		if self.loginScreen:
 			self.loginScreen.hide()
 
-		self.adminScreen.invoke()
+		self.startup()
 
 	def logout(self):
 		self.adminScreen.remove()

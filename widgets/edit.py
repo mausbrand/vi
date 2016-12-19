@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-
 import html5, utils
+
 from html5.a import A
 from html5.form import Fieldset
 from html5.ext import YesNoDialog
@@ -230,7 +230,7 @@ def parseHashParameters( src, prefix="" ):
 	return res
 
 
-class EditWidget( html5.Div ):
+class EditWidget(html5.Div):
 	appList = "list"
 	appHierarchy = "hierarchy"
 	appTree = "tree"
@@ -238,7 +238,7 @@ class EditWidget( html5.Div ):
 	__editIdx_ = 0 #Internal counter to ensure unique ids
 
 	def __init__(self, module, applicationType, key=0, node=None, skelType=None, clone=False,
-	             hashArgs=None, logaction = "Entry saved!", *args, **kwargs ):
+	                hashArgs=None, logaction = "Entry saved!", *args, **kwargs):
 		"""
 			Initialize a new Edit or Add-Widget for the given module.
 			@param module: Name of the module
@@ -323,7 +323,12 @@ class EditWidget( html5.Div ):
 			self.actionbar.setActions(["save.close", "save.continue", "reset"])
 
 		self.reloadData()
-		self.sinkEvent("onChange")
+
+	def onDetach(self):
+		utils.setPreventUnloading(False)
+
+	def onAttach(self):
+		utils.setPreventUnloading(True)
 
 	def showErrorMsg(self, req=None, code=None):
 		"""
@@ -617,29 +622,29 @@ class EditWidget( html5.Div ):
 			self.containers[ key ] = containerDiv
 
 		tmpList = [(k,v) for (k,v) in fieldSets.items()]
-		tmpList.sort( key=lambda x:x[0])
+		tmpList.sort(key=lambda x:x[0])
 
-		for k,v in tmpList:
+		for k, v in tmpList:
 			self.form.appendChild( v )
 			v._section = None
 
 		self.unserialize(data["values"])
 
 		if self._hashArgs: #Apply the default values (if any)
-			self.unserialize( self._hashArgs )
+			self.unserialize(self._hashArgs)
 			self._hashArgs = None
 
 		self._lastData = data
 
 		if hasMissing and not self.wasInitialRequest:
 			conf["mainWindow"].log("warning",translate("Could not save entry!"))
-
+		
 	def unserialize(self, data):
 		"""
 			Applies the actual data to the bones.
 		"""
 		for bone in self.bones.values():
-			bone.unserialize( data )
+			bone.unserialize(data)
 
 	def doSave( self, closeOnSuccess=False, *args, **kwargs ):
 		"""
