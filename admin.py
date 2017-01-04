@@ -1,5 +1,6 @@
 #-*- coding: utf-8 -*-
 import html5
+
 from config import conf
 from widgets import TopBarWidget
 from widgets.userlogoutmsg import UserLogoutMsg
@@ -66,23 +67,31 @@ class AdminScreen(Screen):
 		self.show()
 		self.lock()
 
+		# Run queue
 		startupQueue.setFinalElem(self.startup)
 		startupQueue.run()
 
-	def remove(self):
-		self.userLoggedOutMsg.stopInterval()
-		self.userLoggedOutMsg = None
-		super(AdminScreen, self).remove()
+	def getCurrentUser(self):
+		NetworkService.request("user", "view/self",
+		                        successHandler=self.getCurrentUserSuccess,
+		                        failureHandler=self.getCurrentUserFailure)
+
+	def getCurrentUserSuccess(self, req):
+		answ =  NetworkService.decode(req)
+		conf["currentUser"] = answ["values"]
+		self.startup()
+
+	def getCurrentUserFailure(self, req, code):
+		conf["theApp"].login()
 
 	def startup(self):
-		NetworkService.request(None, "/vi/config", successHandler=self.postInit,
-								failureHandler=self.onError, cacheable=True)
+		config = conf["mainConfig"]
+		assert config
 
-	def log(self, type, msg ):
-		self.logWdg.log( type, msg )
+		if not conf["currentUser"]:
+			self.getCurrentUser()
+			return
 
-	def postInit(self, req):
-		config = NetworkService.decode(req)
 		conf["server"] = config.get("configuration", {})
 
 		moduleGroups = []
@@ -181,6 +190,14 @@ class AdminScreen(Screen):
 		viInitializedEvent.fire()
 		DeferredCall( self.checkInitialHash )
 		self.unlock()
+
+	def remove(self):
+		self.userLoggedOutMsg.stopInterval()
+		self.userLoggedOutMsg = None
+		super(AdminScreen, self).remove()
+
+	def log(self, type, msg ):
+		self.logWdg.log( type, msg )
 
 	def checkInitialHash(self, *args, **kwargs):
 		urlHash = eval("window.top.location.hash")
@@ -325,6 +342,7 @@ class AdminScreen(Screen):
 
 	def removePane(self, pane):
 		assert pane in self.panes, "Cannot remove unknown pane!"
+
 		self.panes.remove( pane )
 		if pane == self.currentPane:
 			if self.panes:
@@ -346,7 +364,7 @@ class AdminScreen(Screen):
 		self.viewport.removeChild( pane.widgetsDomElm )
 
 	def addWidget(self, widget, pane ):
-		pane.addWidget( widget )
+		pane.addWidget(widget)
 
 	def stackWidget(self, widget ):
 		assert self.currentPane is not None, "Cannot stack a widget while no pane is active"
@@ -354,7 +372,8 @@ class AdminScreen(Screen):
 
 	def removeWidget(self, widget ):
 		for pane in self.panes:
-			if pane.containsWidget( widget ):
-				pane.removeWidget( widget )
+			if pane.containsWidget(widget):
+				pane.removeWidget(widget)
 				return
+
 		raise AssertionError("Tried to remove unknown widget %s" % str( widget ))

@@ -32,7 +32,7 @@ class InternalEdit(html5.Div):
 	def renderStructure(self, readOnly = False):
 		self.bones = {}
 
-		tmpDict = utils.boneListToDict( self.skelStructure )
+		tmpDict = {k: v for k, v in self.skelStructure}
 		fieldSets = {}
 		currRow = 0
 
@@ -226,7 +226,7 @@ def parseHashParameters( src, prefix="" ):
 	return res
 
 
-class EditWidget( html5.Div ):
+class EditWidget(html5.Div):
 	appList = "list"
 	appHierarchy = "hierarchy"
 	appTree = "tree"
@@ -234,7 +234,7 @@ class EditWidget( html5.Div ):
 	__editIdx_ = 0 #Internal counter to ensure unique ids
 
 	def __init__(self, module, applicationType, key=0, node=None, skelType=None, clone=False,
-	             hashArgs=None, logaction = "Entry saved!", *args, **kwargs ):
+	                hashArgs=None, logaction = "Entry saved!", *args, **kwargs):
 		"""
 			Initialize a new Edit or Add-Widget for the given module.
 			@param module: Name of the module
@@ -264,10 +264,10 @@ class EditWidget( html5.Div ):
 		assert applicationType in [ EditWidget.appList, EditWidget.appHierarchy, EditWidget.appTree, EditWidget.appSingleton ] #Invalid Application-Type?
 
 		if applicationType==EditWidget.appHierarchy or applicationType==EditWidget.appTree:
-			assert id is not None or node is not None #Need either an id or an node
+			assert key is not None or node is not None #Need either an id or an node
 
 		if clone:
-			assert id is not None #Need an id if we should clone an entry
+			assert key is not None #Need an id if we should clone an entry
 			assert not applicationType==EditWidget.appSingleton # We cant clone a singleton
 			if applicationType==EditWidget.appHierarchy or applicationType==EditWidget.appTree:
 				assert node is not None #We still need a rootNode for cloning
@@ -283,7 +283,7 @@ class EditWidget( html5.Div ):
 		EditWidget.__editIdx_ += 1
 		self.applicationType = applicationType
 		self.key = key
-		self.mode = "edit" if self.key else "add"
+		self.mode = "edit" if self.key or applicationType == EditWidget.appSingleton else "add"
 		self.node = node
 		self.skelType = skelType
 		self.clone = clone
@@ -312,10 +312,19 @@ class EditWidget( html5.Div ):
 		self.appendChild( self.actionbar )
 		self.form = html5.Form()
 		self.appendChild(self.form)
-		self.actionbar.setActions(["save.close","save.continue","reset"])
+
+		if applicationType == EditWidget.appSingleton:
+			self.actionbar.setActions(["save.singleton", "reset"])
+		else:
+			self.actionbar.setActions(["save.close", "save.continue", "reset"])
 
 		self.reloadData()
-		self.sinkEvent("onChange")
+
+	def onDetach(self):
+		utils.setPreventUnloading(False)
+
+	def onAttach(self):
+		utils.setPreventUnloading(True)
 
 	def showErrorMsg(self, req=None, code=None):
 		"""
@@ -527,7 +536,7 @@ class EditWidget( html5.Div ):
 		self.actionbar.resetLoadingState()
 		self.dataCache = data
 
-		tmpDict = utils.boneListToDict( data["structure"] )
+		tmpDict = {k: v for k, v in data["structure"]}
 		fieldSets = {}
 		currRow = 0
 		hasMissing = False
@@ -609,29 +618,29 @@ class EditWidget( html5.Div ):
 			self.containers[ key ] = containerDiv
 
 		tmpList = [(k,v) for (k,v) in fieldSets.items()]
-		tmpList.sort( key=lambda x:x[0])
+		tmpList.sort(key=lambda x:x[0])
 
-		for k,v in tmpList:
+		for k, v in tmpList:
 			self.form.appendChild( v )
 			v._section = None
 
 		self.unserialize(data["values"])
 
 		if self._hashArgs: #Apply the default values (if any)
-			self.unserialize( self._hashArgs )
+			self.unserialize(self._hashArgs)
 			self._hashArgs = None
 
 		self._lastData = data
 
 		if hasMissing and not self.wasInitialRequest:
 			conf["mainWindow"].log("warning",translate("Could not save entry!"))
-
+		
 	def unserialize(self, data):
 		"""
 			Applies the actual data to the bones.
 		"""
 		for bone in self.bones.values():
-			bone.unserialize( data )
+			bone.unserialize(data)
 
 	def doSave( self, closeOnSuccess=False, *args, **kwargs ):
 		"""

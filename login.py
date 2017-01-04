@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
+import html5, re, json
 
-import html5
 from network import NetworkService, DeferredCall
 from i18n import translate
 from event import EventDispatcher
@@ -137,20 +137,27 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 		                        failureHandler=self.doLoginFailure)
 
 	def doLoginSuccess(self, req):
-		answ = NetworkService.decode(req)
-		print(answ)
-
 		self.unlock()
 		self.loginBtn["disabled"] = False
 
-		if answ == "OKAY":
-			self.login()
-		elif answ == "ONE-TIME-PASSWORD":
-			self.pwform.hide()
-			self.otpform.show()
-			self.otp.focus()
+		res = re.search("JSON\(\((.*)\)\)", req.result)
+		if res:
+			print("RESULT >%s<" % res.group(1))
+			answ = json.loads(res.group(1))
+
+			if answ == "OKAY":
+				self.login()
+			elif answ == "X-VIUR-2FACTOR-TimeBasedOTP":
+				self.pwform.hide()
+				self.otpform.show()
+				self.otp.focus()
+			else:
+				self.password.focus()
 		else:
-			self.password.focus()
+			print("Cannot read valid response from:")
+			print("---")
+			print(req.result)
+			print("---")
 
 	def doLoginFailure(self, *args, **kwargs):
 		alert("Fail")
@@ -219,7 +226,6 @@ class GoogleAccountLoginHandler(BaseLoginHandler):
 
 	def onLoginClick(self, sender = None):
 		self.lock()
-		eval("window.top.preventViUnloading = false;")
 		eval("window.top.location = \"/vi/user/auth_googleaccount/login\"")
 
 	@staticmethod
@@ -270,21 +276,21 @@ class LoginScreen(Screen):
 		self.show()
 		self.lock()
 
-		if not self.haveLoginHandlers:
-			NetworkService.request("user", "getAuthMethods",
-		                            successHandler=self.onGetAuthMethodsSuccess,
-		                            failureHandler=self.onGetAuthMethodsFailure)
-
-			return
-
-		conf["currentUser"] = None
-
 		#Enforce logout
 		if logout:
 			NetworkService.request("user", "logout",
 					                successHandler=self.onLogoutSuccess,
 					                failureHandler=self.onLogoutSuccess,
 					                secure=True)
+			return
+
+		conf["currentUser"] = None
+
+		if not self.haveLoginHandlers:
+			NetworkService.request("user", "getAuthMethods",
+		                            successHandler=self.onGetAuthMethodsSuccess,
+		                            failureHandler=self.onGetAuthMethodsFailure)
+
 			return
 
 		#Check if already logged in!
@@ -294,6 +300,7 @@ class LoginScreen(Screen):
 		                        failureHandler=self.doShowLogin)
 
 	def onLogoutSuccess(self, *args, **kwargs):
+		conf["currentUser"] = None
 		self.invoke()
 
 	def doShowLogin(self, *args, **kwargs):
@@ -313,7 +320,7 @@ class LoginScreen(Screen):
 			self.loginScreen.redirectNoAdmin()
 
 		print("User already logged in")
-		conf["theApp"].login()
+		conf["theApp"].admin()
 
 	def onGetAuthMethodsSuccess(self, req):
 		answ = NetworkService.decode(req)
@@ -341,6 +348,5 @@ class LoginScreen(Screen):
 		alert("Fail")
 
 	def redirectNoAdmin(self):
-		eval("window.top.preventViUnloading = false;")
 		eval("window.top.location = \"/\"")
 

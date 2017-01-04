@@ -1,237 +1,231 @@
-import html5
-from html5.ext.button import Button
-from datetime import datetime
+# -*- coding: utf-8 -*-
+import html5, utils, datetime
+from network import NetworkService, DeferredCall
 from config import conf
-from network import NetworkService
-from priorityqueue import viewDelegateSelector, actionDelegateSelector, extractorDelegateSelector
-from i18n import translate
+from priorityqueue import actionDelegateSelector, extractorDelegateSelector
+from i18n import translate, addTranslation
 
-class CsvExport(html5.Div):
-	_batchSize = 99  # How many row we fetch at once
+class ExportCsv(html5.Progress):
+	def __init__(self, widget, selection, encoding = None, language = None,
+	                separator = None, lineSeparator = None, *args, **kwargs):
+		super(ExportCsv, self).__init__(*args, **kwargs)
 
-	def __init__(self, parent):
-		"""
-			@param parent: parent module
-		"""
-		super(CsvExport, self).__init__()
-		self.module = parent.module
-		self._structure = None
-		self.columns = []
-		self.column_keys = dict()
+		if encoding is None or encoding not in ["utf-8", "iso-8859-15"]:
+			encoding = "utf-8"
 
-		self.filter = parent.getFilter()
-		self.columns = list()
-		self.skelData = list()
-		self.cell_renderer = dict()
-		# Proxy some events and functions of the original table
-		self.emptyNotificationDiv = html5.Div()
-		self.emptyNotificationDiv.appendChild(html5.TextNode("Currently no entries"))
-		self.emptyNotificationDiv["class"].append("emptynotification")
-		self.appendChild(self.emptyNotificationDiv)
+		if language is None or language not in conf["server"].keys():
+			language = conf["currentlanguage"]
 
-		self.emptyNotificationDiv["style"]["display"] = "none"
+		self.widget = widget
+		self.module = widget.module
+		self.params = self.widget.getFilter().copy()
+		self.params["amount"] = 99
+		self.data = []
+		self.structure = None
+		self.separator = separator or ";"
+		self.lineSeparator = lineSeparator or "\n"
+		self.encoding = encoding
+		self.lang = language
 
-		if "viur.defaultlangsvalues" in conf["server"].keys():
-			lngList = conf["server"]["viur.defaultlangsvalues"].items()
+		conf["mainWindow"].log("progress", self)
+		self.parent()["class"].append("is_new")
+		self.parent()["class"].append("log_progress")
+		self.appendChild(html5.TextNode(translate("CSV-Export")))
 
-			self.lang_select = html5.Select()
-			self.lang_select["id"] = "lang-select"
+		DeferredCall(self.nextChunk)
 
-			label1 = html5.Label(translate("Language selection"))
-			label1["for"] = "lang-select"
+	def nextChunk(self, cursor = None):
+		if cursor:
+			self.params["cursor"] = cursor
 
-			span1 = html5.Div()
-			span1.appendChild(label1)
-			span1.appendChild(self.lang_select)
-			span1["class"] = "bone"
+		NetworkService.request(self.module, "list", self.params,
+		                        successHandler=self.nextChunkComplete,
+		                        failureHandler=self.nextChunkFailure)
 
-			self.appendChild(span1)
+	def nextChunkComplete(self, req):
+		answ = NetworkService.decode(req)
 
-			for key, value in lngList:
-				aoption = html5.Option()
-				aoption["value"] = key
-				aoption.element.innerHTML = value
-				# self.appendChild(aoption)
-				if key == conf["currentlanguage"]:
-					aoption["selected"] = True
-				self.lang_select.appendChild(aoption)
-		else:
-			self.lang_select = None
+		if self.structure is None:
+			self.structure = answ["structure"]
 
-		# Encoding
-		self.encoding_select = html5.Select()
-		self.encoding_select["id"] = "encoding-select"
-
-		label2 = html5.Label(translate("Encoding"))
-		label2["for"] = "encoding-select"
-
-		span2 = html5.Div()
-		span2.appendChild(label2)
-		span2.appendChild(self.encoding_select)
-		span2["class"] = "bone"
-		self.appendChild(span2)
-
-		tmp1 = html5.Option()
-		tmp1["value"] = "iso-8859-15"
-		tmp1["selected"] = True
-		tmp1.element.innerHTML = "ISO-8859-15"
-		self.encoding_select.appendChild(tmp1)
-
-		tmp2 = html5.Option()
-		tmp2["value"] = "utf-8"
-		tmp2.element.innerHTML = "UTF-8"
-		self.encoding_select.appendChild(tmp2)
-
-		self.exportBtn = Button("Export", self.on_btnExport_released)
-		self.appendChild(self.exportBtn)
-
-
-	def onSkelStructureCompletion(self, req):
-		data = NetworkService.decode(req)
-		self._structure = data["structure"]
-		tmpDict = {}
-		for key, bone in self._structure:
-			tmpDict[key] = bone
-
-		count = 0
-		for key, bone in self._structure:
-			if bone["visible"] and ("params" not in bone or bone["params"] is None or "ignoreForCsvExport" not in bone["params"] or not bone["params"]["ignoreForCsvExport"]):
-				self.columns.append(str(bone["descr"]))
-				self.column_keys[key] = count
-				count += 1
-				extractor = extractorDelegateSelector.select(self.module, key, tmpDict)
-				if not extractor:
-					raise TypeError("missing extractor", self.module, key, tmpDict)
-				extractor = extractor(self.module, key, tmpDict)
-				self.cell_renderer[key] = extractor
-
-		print("structure", self.columns)
-		self.reloadData()
-
-	def onNextBatchNeeded(self, *args, **kwargs):
-		pass
-
-	def showErrorMsg(self, req=None, code=None):
-		"""
-			Removes all currently visible elements and displayes an error message
-		"""
-		self.actionBar["style"]["display"] = "none"
-		self.table["style"]["display"] = "none"
-		errorDiv = html5.Div()
-		errorDiv["class"].append("error_msg")
-		if code and (code == 401 or code == 403):
-			txt = "Access denied!"
-		else:
-			txt = "An unknown error occurred!"
-		errorDiv["class"].append("error_code_%s" % (code or 0))
-		errorDiv.appendChild(html5.TextNode(txt))
-		self.appendChild(errorDiv)
-
-	def reloadData(self):
-		"""
-			Removes all currently displayed data and refetches the first batch from the server.
-		"""
-		self.skelData = []
-		filter = self.filter.copy()
-		filter["amount"] = self._batchSize
-
-		NetworkService.request(self.module, "list", filter,
-		                        successHandler=self.onCompletion,
-		                        failureHandler=self.showErrorMsg)
-
-	def onCompletion(self, req):
-		"""
-			Pass the rows received to the datatable.
-			@param req: The network request that succeed.
-		"""
-		data = NetworkService.decode(req)
-
-		self.emptyNotificationDiv["style"]["display"] = "none"
-		self.skelData.extend(data["skellist"])
-
-		print(len(data["skellist"]), len(self.skelData))
-
-		if data["skellist"] and data.get("cursor"):
-			filter = self.filter.copy()
-			filter["amount"] = self._batchSize
-			filter["cursor"] = data["cursor"]
-
-			NetworkService.request(self.module, "list", filter,
-			                        successHandler=self.onCompletion,
-			                        failureHandler=self.showErrorMsg)
-		else:
-			self.dataArrived()
-
-	def on_btnExport_released(self, *args, **kwargs):
-		filter = self.filter.copy()
-		filter["amount"] = 1
-
-		NetworkService.request(self.module, "list", filter,
-		                        successHandler=self.onSkelStructureCompletion,
-		                        failureHandler=self.showErrorMsg)
-
-	def dataArrived(self):
-		lenData= len(self.skelData)
-		print("exporting now...%d" % lenData)
-		if lenData == 0:
+		if not answ["skellist"]:
+			self.exportToFile()
 			return
 
-		current_lang = conf["currentlanguage"]
-		export_lang = conf["currentlanguage"]
+		self.data.extend(answ["skellist"])
+		self.nextChunk(answ["cursor"])
 
-		if self.lang_select:
-			for aoption in self.lang_select._children:
-				if aoption["selected"]:
-					export_lang = aoption["value"]
-		encoding = "iso-8859-15"
-		for aoption in self.encoding_select._children:
-			if aoption["selected"]:
-				encoding = aoption["value"]
-		try:
-			if export_lang != current_lang:
-				conf["currentlanguage"] = export_lang
+	def exportToFile(self):
+		if not self.data:
+			self.replaceWithMessage(translate("No datasets to export."), logClass="info")
+			return
 
-			data = self.skelData
-			resStr = ";".join([str(i) for i in self.columns]) + "\n"
-			count = len(self.columns)
-			for recipient in data:
-				values = [None for i in range(count)]
-				for key, value in recipient.items():
-					if key not in self.column_keys or value is None or value == "None" or value == "none":
-						continue
-					extractor = self.cell_renderer[key]
-					try:
-						index = self.column_keys[key]
-						values[index] = extractor.render(recipient, key)
-					except ValueError:
-						pass
-				line = ";".join(values) + "\n"
-				resStr += line
 
-			tmpA = html5.A()
-			self.appendChild(tmpA)
-			encFunc = eval("encodeURIComponent")
-			escapeFunc = eval("escape")
-			if encoding == "utf-8":
-				tmpA["href"] = "data:text/csv;charset=utf-8," + encFunc(resStr)
-			elif encoding == "iso-8859-15":
-				tmpA["href"] = "data:text/csv;charset=ISO-8859-15," + escapeFunc(resStr)
-			else:
-				raise ValueError("unknown encoding: %s" % encoding)
-			tmpA["download"] = "export-%s-%s-%s-%s.csv" % (self.module, export_lang, encoding, datetime.now().strftime("%Y%m%d%H%M"))
-			tmpA.element.click()
-			conf["mainWindow"].removeWidget(self)
+		assert self.structure
 
-			alert(u"%s Datasets exported" % len(self.skelData))
-		except Exception, err:
-			print("ERROR OCCURED...")
-			raise
-		finally:
-			conf["currentlanguage"] = current_lang
+		defaultLanguage = conf["currentlanguage"]
+		conf["currentlanguage"] = self.lang
 
-	def onFinished(self, req):
-		if self.request.isIdle():
-			self.request.deleteLater()
-			self.request = None
-		self.overlay.inform(self.overlay.SUCCESS)
+		# Visualize progress
+		self["max"] = len(self.data)
+		self["value"] = 0
 
+		cellRenderer = {}
+		struct = utils.boneListToDict(self.structure)
+		fields = {}
+		titles = []
+
+		idx = 0
+		for key, bone in self.structure:
+			#if bone["visible"] and ("params" not in bone or bone["params"] is None or "ignoreForCsvExport" not in bone[
+			#	"params"] or not bone["params"]["ignoreForCsvExport"]):
+			if bone["visible"]:
+				cellRenderer[key] = extractorDelegateSelector.select(self.module, key, struct)
+				if cellRenderer[key]:
+					cellRenderer[key] = cellRenderer[key](self.module, key, struct)
+
+				fields[key] = idx
+				idx += 1
+
+				titles.append(bone.get("descr", key) or key)
+
+		# Export
+		content = self.separator.join(titles) + self.lineSeparator
+
+		for entry in self.data:
+			row = [None for _ in range(len(fields.keys()))]
+
+			for key, value in entry.items():
+				if key not in fields or value is None or str(value).lower() == "none":
+					continue
+
+				try:
+					if cellRenderer[key] is not None:
+						row[fields[key]] = cellRenderer[key].render(entry, key)
+					else:
+						row[fields[key]] = str(value)
+
+				except ValueError:
+					pass
+
+			content += self.separator.join(row) + self.lineSeparator
+			self["value"] += 1
+
+		# Virtual File
+		conf["currentlanguage"] = defaultLanguage
+
+		a = html5.A()
+		a.hide()
+		self.appendChild(a)
+
+		if self.encoding == "utf-8":
+			encodeURIComponent = eval("encodeURIComponent")
+			a["href"] = "data:text/csv;charset=utf-8," + encodeURIComponent(content)
+		elif self.encoding == "iso-8859-15":
+			escape = eval("escape")
+			a["href"] = "data:text/csv;charset=ISO-8859-15," + escape(content)
+		else:
+			raise ValueError("unknown encoding: %s" % self.encoding)
+
+		filename = "export-%s-%s-%s-%s.csv" % (self.module, self.lang, self.encoding,
+		                                       datetime.datetime.now().strftime("%Y-%m-%d"))
+		a["download"] = filename
+		a.element.click()
+
+		self.replaceWithMessage(translate("{count} datasets exported\nas {filename}",
+		                                    count=len(self.data), filename=filename))
+
+		self.data = None
+		self.structure = None
+
+	def nextChunkFailure(self, req, code):
+		self.replaceWithMessage(translate("Error {code} on CSV export.", code=code), logClass="error")
+		self.widget.reloadData()
+
+	def replaceWithMessage(self, message, logClass="success"):
+		self.parent()["class"] = []
+		self.parent()["class"].append("log_%s" % logClass)
+
+		msg = html5.Span()
+		html5.utils.textToHtml(msg, message)
+
+		self.parent().appendChild(msg)
+		self.parent().removeChild(self)
+
+class ExportCsvStarter(html5.ext.Popup):
+
+	def __init__(self, widget, *args, **kwargs ):
+		super(ExportCsvStarter, self).__init__(title=translate("CSV Export"))
+
+		self.widget = widget
+
+		if "viur.defaultlangsvalues" in conf["server"].keys():
+			self.langSelect = html5.Select()
+			self.langSelect["id"] = "lang-select"
+		
+			lbl = html5.Label(translate("Language selection"))
+			lbl["for"] = "lang-select"
+		
+			div = html5.Div()
+			div.appendChild(lbl)
+			div.appendChild(self.langSelect)
+			div.addClass("bone")
+		
+			self.appendChild(div)
+		
+			for key, value in conf["server"]["viur.defaultlangsvalues"].items():
+				opt = html5.Option()
+				opt["value"] = key
+				opt.appendChild(html5.TextNode(value))
+
+				if key == conf["currentlanguage"]:
+					opt["selected"] = True
+
+				self.langSelect.appendChild(opt)
+		else:
+			self.langSelect = None
+		
+		# Encoding
+		self.encodingSelect = html5.Select()
+		self.encodingSelect["id"] = "encoding-select"
+
+		lbl = html5.Label(translate("Encoding"))
+		lbl["for"] = "encoding-select"
+
+		div = html5.Div()
+		div.appendChild(lbl)
+		div.appendChild(self.encodingSelect)
+		div.addClass("bone")
+
+		self.appendChild(div)
+
+		for i, (k, v) in enumerate([("iso-8859-15", "ISO-8859-15"), ("utf-8", "UTF-8")]):
+			opt = html5.Option()
+			opt["value"] = k
+
+			if i == 0:
+				opt["selected"] = True
+
+			opt.appendChild(html5.TextNode(v))
+			self.encodingSelect.appendChild(opt)
+
+		div = html5.Div()
+		div.addClass("button-container")
+		self.appendChild(div)
+
+		self.cancelBtn = html5.ext.Button(translate("Cancel"), self.close)
+		div.appendChild(self.cancelBtn)
+
+		self.exportBtn = html5.ext.Button(translate("Export"), self.onExportBtnClick)
+		div.appendChild(self.exportBtn)
+
+	def onExportBtnClick(self, *args, **kwargs):
+		encoding = self.encodingSelect["options"].item(self.encodingSelect["selectedIndex"]).value
+
+		if self.langSelect:
+			language = self.langSelect["options"].item(self.langSelect["selectedIndex"]).value
+		else:
+			language = None
+
+		ExportCsv(self.widget, self.widget.getCurrentSelection(), encoding=encoding, language=language)
+		self.close()
