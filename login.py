@@ -7,6 +7,7 @@ from event import EventDispatcher
 from config import conf
 from priorityqueue import loginHandlerSelector
 from screen import Screen
+from widgets import InternalEdit
 
 class LoginInputField(html5.Input):
 
@@ -69,6 +70,17 @@ class BaseLoginHandler(html5.Li):
 	def reset(self):
 		pass
 
+	def parseAnswer(self, req):
+		res = re.search("JSON\(\((.*)\)\)", req.result)
+
+		if res:
+			answ = json.loads(res.group(1))
+		else:
+			answ = NetworkService.decode(req)
+
+		return answ
+
+
 class UserPasswordLoginHandler(BaseLoginHandler):
 	cssname = "userpassword"
 
@@ -107,6 +119,19 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 		self.verifyBtn = html5.ext.Button(translate("Verify"), callback=self.onVerifyClick)
 		self.otpform.appendChild(self.verifyBtn)
 
+		# Universal edit widget
+		self.editform = html5.Div()
+		self.editform.hide()
+		self.mask.appendChild(self.editform)
+
+		self.edit = html5.Div()
+		self.editform.appendChild(self.edit)
+
+		self.editskey = self.editaction = self.editwidget = None
+
+		self.sendBtn = html5.ext.Button(translate("Send"), callback=self.onSendClick)
+		self.editform.appendChild(self.sendBtn)
+
 	def onKeyPress(self, event):
 		if event.keyCode == 13:
 			if html5.utils.doesEventHitWidgetOrChildren(event, self.username):
@@ -139,28 +164,36 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 	def doLoginSuccess(self, req):
 		self.unlock()
 		self.loginBtn["disabled"] = False
+		self.sendBtn["disabled"] = False
 
-		res = re.search("JSON\(\((.*)\)\)", req.result)
-		if res:
-			print("RESULT >%s<" % res.group(1))
-			answ = json.loads(res.group(1))
+		answ = self.parseAnswer(req)
+		print("doLoginSuccess", answ)
 
-			if answ == "OKAY":
-				self.login()
-			elif answ == "X-VIUR-2FACTOR-TimeBasedOTP":
+		if answ == "OKAY":
+			self.login()
+
+		elif isinstance(answ, dict) and "action" in answ:
+			if answ["action"] == "otp":
 				self.pwform.hide()
+				self.editform.hide()
 				self.otpform.show()
 				self.otp.focus()
 			else:
-				self.password.focus()
-		else:
-			print("Cannot read valid response from:")
-			print("---")
-			print(req.result)
-			print("---")
+				self.pwform.hide()
+				self.otpform.hide()
+				self.edit.removeAllChildren()
 
-	def doLoginFailure(self, *args, **kwargs):
-		alert("Fail")
+				self.editaction = "auth_userpassword/%s" % answ["action"]
+				self.editwidget = InternalEdit(answ["structure"], answ["values"], defaultCat = None)
+				self.edit.appendChild(self.editwidget)
+				self.editskey = answ["params"].get("skey")
+
+				self.editform.show()
+		else:
+			self.password.focus()
+
+	def doLoginFailure(self, req, code, *args, **kwargs):
+		alert("Failure %d" % int(code))
 
 	def onVerifyClick(self, sender = None):
 		if not self.otp["value"]:
@@ -169,7 +202,7 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 		self.verifyBtn["disabled"] = True
 		self.lock()
 
-		NetworkService.request("user", "f2_otp2factor/otp",
+		NetworkService.request("user", "f2_timebasedotp/otp",
 		                        params={"otptoken": self.otp["value"]},
 		                        secure=True,
 		                        successHandler=self.doVerifySuccess,
@@ -179,15 +212,37 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 		self.unlock()
 		self.verifyBtn["disabled"] = False
 
-		if NetworkService.isOkay(req):
+		answ = self.parseAnswer(req)
+		print("doVerifySuccess", answ)
+
+		if answ == "OKAY":
 			self.login()
-		else:
-			self.otp["value"] = ""
-			self.otp.focus()
+			return
+
+		self.otp["value"] = ""
+		self.otp.focus()
 
 	def doVerifyFailure(self, *args, **kwargs):
 		self.reset()
 		self.enable()
+
+	def onSendClick(self, sender=None):
+		assert self.editwidget and self.editaction
+
+		self.lock()
+		self.sendBtn["disabled"] = True
+
+		params = self.editwidget.doSave()
+		if self.editskey:
+			params["skey"] = self.editskey
+
+		print(params)
+
+		NetworkService.request("user", self.editaction,
+		                        params=params,
+		                        secure=not self.editskey,
+		                        successHandler=self.doLoginSuccess,
+		                        failureHandler=self.doLoginFailure)
 
 	def reset(self):
 		self.loginBtn["disabled"] = False
@@ -197,9 +252,13 @@ class UserPasswordLoginHandler(BaseLoginHandler):
 		self.username["value"] = ""
 		self.password["value"] = ""
 
+		self.edit.removeAllChildren()
+		self.editskey = self.editwidget = self.editaction = None
+
 	def enable(self):
 		self.pwform.show()
 		self.otpform.hide()
+		self.editform.hide()
 
 		super(UserPasswordLoginHandler, self).enable()
 		DeferredCall(self.focusLaterIdiot)
@@ -295,7 +354,6 @@ class LoginScreen(Screen):
 
 		#Check if already logged in!
 		NetworkService.request( "user", "view/self",
-		                        secure=True,
 		                        successHandler=self.doSkipLogin,
 		                        failureHandler=self.doShowLogin)
 
@@ -303,10 +361,18 @@ class LoginScreen(Screen):
 		conf["currentUser"] = None
 		self.invoke()
 
-	def doShowLogin(self, *args, **kwargs):
+	def doShowLogin(self, req, code, *args, **kwargs):
 		self.unlock()
 		self.show()
 		self.selectHandler()
+
+	def insufficientRights(self):
+		self.unlock()
+		self.hide()
+
+		html5.ext.Alert(translate("vi.login.insufficient-rights"),
+		                okLabel=translate("Login as different user"),
+		                okCallback=lambda: self.invoke(logout=True))
 
 	def doSkipLogin(self, req):
 		answ = NetworkService.decode(req)
@@ -315,9 +381,12 @@ class LoginScreen(Screen):
 			return
 
 		conf["currentUser"] = answ["values"]
-		if not any([x in conf["currentUser"].get("access", []) for x in ["admin", "root"]]):
-			self.reset()
-			self.loginScreen.redirectNoAdmin()
+
+		if conf["vi.access.rights"]:
+			if not any([x in conf["currentUser"].get("access", []) for x in conf["vi.access.rights"]]):
+				self.insufficientRights()
+				return
+				#self.loginScreen.redirectNoAdmin()
 
 		print("User already logged in")
 		conf["theApp"].admin()
@@ -328,7 +397,9 @@ class LoginScreen(Screen):
 		methods = []
 		for method in answ:
 			handler = loginHandlerSelector.select(method[0], method[1])
-
+			if not handler:
+				print("Warning: Login-Handler \"%s\" with second factor \"%s\" unknown" % (method[0], method[1]))
+				continue
 			# Check if this handler is already inserted!
 			if not any([c.__class__.__name__ == handler.__name__ for c in self.loginMethodSelector._children]):
 				handler(self)

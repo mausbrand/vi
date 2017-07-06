@@ -11,7 +11,7 @@ from log import Log
 from pane import Pane, GroupPane
 from screen import Screen
 
-# THESE MUST REMAIN AND ARE QUEUED!!
+# BELOW IMPORTS MUST REMAIN AND ARE QUEUED!!
 import handler
 import bones
 import actions
@@ -40,9 +40,9 @@ class AdminScreen(Screen):
 		self.modulList["class"] = "vi_manager"
 		self.modulMgr.appendChild(self.modulList)
 
-		self.modulListUl = html5.Ul()
-		self.modulListUl["class"] = "modullist"
-		self.modulList.appendChild(self.modulListUl)
+		self.moduleListUl = html5.Ul()
+		self.moduleListUl["class"] = "modullist"
+		self.modulList.appendChild(self.moduleListUl)
 
 		self.viewport = html5.Div()
 		self.viewport["class"] = "vi_viewer"
@@ -188,7 +188,7 @@ class AdminScreen(Screen):
 
 		# Finalizing!
 		viInitializedEvent.fire()
-		DeferredCall( self.checkInitialHash )
+		DeferredCall(self.checkInitialHash)
 		self.unlock()
 
 	def remove(self):
@@ -200,7 +200,7 @@ class AdminScreen(Screen):
 		self.logWdg.log( type, msg )
 
 	def checkInitialHash(self, *args, **kwargs):
-		urlHash = eval("window.top.location.hash")
+		urlHash = conf["startupHash"]
 		if not urlHash:
 			return
 		
@@ -252,6 +252,17 @@ class AdminScreen(Screen):
 		if gen:
 			gen(path, param)
 
+	def switchFullscreen(self, fullscreen = True):
+		if fullscreen:
+			self.modulMgr.hide()
+			self.viewport.addClass("is_fullscreen")
+		else:
+			self.modulMgr.show()
+			self.viewport.removeClass("is_fullscreen")
+
+	def isFullscreen(self):
+		return "is_fullscreen" in self.viewport["class"]
+
 	def onError(self, req, code):
 		print("ONERROR")
 
@@ -271,9 +282,9 @@ class AdminScreen(Screen):
 		self.panes.append( pane )
 
 		if parentPane:
-			parentPane.addChildPane( pane )
+			parentPane.addChildPane(pane)
 		else:
-			self.modulListUl.appendChild( pane )
+			self.moduleListUl.appendChild(pane)
 
 		self.viewport.appendChild(pane.widgetsDomElm)
 		pane.widgetsDomElm["style"]["display"] = "none"
@@ -356,10 +367,10 @@ class AdminScreen(Screen):
 			else:
 				self.nextPane = None
 
-		if pane.parentPane == self:
-			self.modulListUl.removeChild( pane )
+		if not pane.parentPane or pane.parentPane is self:
+			self.moduleListUl.removeChild(pane)
 		else:
-			pane.parentPane.removeChildPane( pane )
+			pane.parentPane.removeChildPane(pane)
 
 		self.viewport.removeChild( pane.widgetsDomElm )
 
