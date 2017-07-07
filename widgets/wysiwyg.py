@@ -1,155 +1,154 @@
-import html5
+# -*- coding: utf-8 -*-
+import html5, re
 from widgets.actionbar import ActionBar
-from event import EventDispatcher
-from time import time
-from priorityqueue import actionDelegateSelector
-import re
-from config import conf
 from widgets.file import FileWidget
+
+from event import EventDispatcher
+from priorityqueue import actionDelegateSelector
+from config import conf
 from i18n import translate
 from network import DeferredCall
 
 class BasicEditorAction(html5.ext.Button):
-
-	def execCommand(self, *args, **kwargs):
-		return self.parent().parent().editor.execCommand(*args, **kwargs)
-
-class BasicTextAction(BasicEditorAction):
 	cmd = None
+	name = None
+	value = True
 	title = None
+
 	isActiveTag = None
-	qclass = None
-	qvalue = None
 
 	def __init__(self, *args, **kwargs):
 		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
 
 		self.addClass("icon", "text", "style", self.cmd)
 
-		if self.qclass:
-			self.addClass("ql-%s" % self.qclass)
-
-		if self.qvalue:
-			self["value"] = self.qvalue
-
 		if self.title:
 			self["title"] = self.title
 
+	def getQuill(self):
+		return self.parent().parent().editor.quill
 
-class TextStyleBold(BasicTextAction):
-	qclass = cmd = "bold"
+	def onClick(self, sender = None):
+		q = self.getQuill()
+
+		fmt = q.getFormat()
+
+		value = getattr(fmt, self.name, not self.value)
+		if value == self.value:
+			value = not value
+		else:
+			value = self.value
+
+		print(self.name, value)
+
+		q.format(self.name, value)
+
+class TextStyleBold(BasicEditorAction):
+	name = cmd = "bold"
 	title = translate("Bold")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.bold", TextStyleBold )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.bold", TextStyleBold)
 
-class TextStyleItalic(BasicTextAction):
-	qclass = cmd = "italic"
+class TextStyleItalic(BasicEditorAction):
+	name = cmd = "italic"
 	title = translate("Italic")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
 
-class TextStyleH1(BasicTextAction):
+class TextStyleH1(BasicEditorAction):
 	cmd = "H1"
-	qclass = "header"
-	qvalue = "1"
+	name = "header"
+	value = 1
 
 	title = translate("H1")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h1", TextStyleH1 )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h1", TextStyleH1 )
 
-class TextStyleH2(BasicTextAction):
+class TextStyleH2(BasicEditorAction):
 	cmd = "H2"
-	qclass = "header"
-	qvalue = "2"
+	name = "header"
+	value = 2
 	title = translate("H2")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h2", TextStyleH2 )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h2", TextStyleH2 )
 
-class TextStyleH3(BasicTextAction):
+class TextStyleH3(BasicEditorAction):
 	cmd = "H3"
-	qclass = "header"
-	qvalue = "3"
+	name = "header"
+	value = 3
 	title = translate("H3")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h3", TextStyleH3 )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h3", TextStyleH3 )
 
-class TextStyleH4(BasicTextAction):
-	cmd = "H4"
-	qclass = "header"
-	qvalue = "4"
-	title = translate("H4")
-
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.h4", TextStyleH4 )
-
-class TextStyleBlockQuote(BasicTextAction):
-	cmd = "BLOCKQUOTE"
-	qclass = "blockquote"
+class TextStyleBlockQuote(BasicEditorAction):
+	name = cmd = "blockquote"
 	title = translate("Blockqoute")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.blockquote", TextStyleBlockQuote )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.blockquote", TextStyleBlockQuote )
 
-class TextStyleJustifyCenter(BasicTextAction):
+class TextStyleJustifyCenter(BasicEditorAction):
 	cmd = "justifyCenter"
-	qclass = "align"
-	qvalue = "center"
+	name = "align"
+	value = "center"
 	title = translate("Justifiy Center")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyCenter", TextStyleJustifyCenter )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyCenter", TextStyleJustifyCenter )
 
-class TextStyleJustifyLeft(BasicTextAction):
+class TextStyleJustifyLeft(BasicEditorAction):
 	cmd = "justifyLeft"
-	qclass = "align"
-	qvalue = ""
+	name = "align"
+	value = ""
 	title = translate("Justifiy Left")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyLeft", TextStyleJustifyLeft )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyLeft", TextStyleJustifyLeft )
 
-class TextStyleJustifyRight(BasicTextAction):
+class TextStyleJustifyRight(BasicEditorAction):
 	cmd = "justifyRight"
-	qclass = "align"
-	qvalue = "right"
+	name = "align"
+	value = "right"
 	title = translate("Justifiy Right")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="style.text.justifyRight", TextStyleJustifyRight )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyRight", TextStyleJustifyRight )
 
 
-class TextInsertOrderedList(BasicTextAction):
+class TextInsertOrderedList(BasicEditorAction):
 	cmd = "insertOrderedList"
-	qclass = "list"
-	qvalue = "ordered"
+	name = "list"
+	value = "ordered"
 	title = translate("Insert an ordered List")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.orderedList", TextInsertOrderedList )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.orderedList", TextInsertOrderedList )
 
-class TextInsertUnorderedList(BasicTextAction):
+class TextInsertUnorderedList(BasicEditorAction):
 	cmd = "insertUnorderedList"
-	qclass = "list"
-	qvalue = "bullet"
+	name = "list"
+	value = "bullet"
 	title = translate("Insert an unordered List")
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.unorderedList", TextInsertUnorderedList )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.unorderedList", TextInsertUnorderedList )
 
-class TextIndent(BasicTextAction):
-	qclass = cmd = "indent"
-	qvalue = "+1"
+class TextIndent(BasicEditorAction):
+	name = cmd = "indent"
+	value = "+1"
 	title = translate("Indent more")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.indent", TextIndent )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.indent", TextIndent )
 
-class TextOutdent(BasicTextAction):
+class TextOutdent(BasicEditorAction):
 	cmd = "outdent"
-	qclass = "indent"
-	qvalue = "-1"
+	name = "indent"
+	value = "-1"
 	title = translate("Indent less")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.outdent", TextOutdent )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.outdent", TextOutdent )
 
-class TextRemoveFormat(BasicTextAction):
+class TextRemoveFormat(BasicEditorAction):
 	cmd = "removeformat"
-	qclass = "clean"
+	name = "clean"
 	title = translate("Remove all formatting")
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
 
+'''
 class TextInsertImageAction(BasicEditorAction):
 	def __init__(self, *args, **kwargs):
 		super( TextInsertImageAction, self ).__init__( translate("Insert Image"), *args, **kwargs )
@@ -177,13 +176,15 @@ class TextInsertImageAction(BasicEditorAction):
 				self.execCommand("createLink", dataUrl + "?download=1")
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.image" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
+actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
+'''
+
 '''
 class TextInsertLinkAction(BasicEditorAction):
 	newLinkIdx = 0
@@ -203,13 +204,13 @@ class TextInsertLinkAction(BasicEditorAction):
 			self.parent().parent().editor.focus()
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.link" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TextInsertLinkAction.isSuitableFor, TextInsertLinkAction )
+actionDelegateSelector.insert(1, TextInsertLinkAction.isSuitableFor, TextInsertLinkAction )
 '''
 
 '''
@@ -283,13 +284,13 @@ class TextInsertTableAction( html5.ext.Button ):
 			CreateTablePopup( node )
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TextInsertTableAction.isSuitableFor, TextInsertTableAction )
+actionDelegateSelector.insert(1, TextInsertTableAction.isSuitableFor, TextInsertTableAction )
 
 class TableInsertRowBeforeAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -315,13 +316,13 @@ class TableInsertRowBeforeAction( html5.ext.Button ):
 			node = node.parentNode
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.newrow.before" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TableInsertRowBeforeAction.isSuitableFor, TableInsertRowBeforeAction )
+actionDelegateSelector.insert(1, TableInsertRowBeforeAction.isSuitableFor, TableInsertRowBeforeAction )
 
 class TableInsertRowAfterAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -350,13 +351,13 @@ class TableInsertRowAfterAction( html5.ext.Button ):
 			node = node.parentNode
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.newrow.after" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TableInsertRowAfterAction.isSuitableFor, TableInsertRowAfterAction )
+actionDelegateSelector.insert(1, TableInsertRowAfterAction.isSuitableFor, TableInsertRowAfterAction )
 
 class TableInsertColBeforeAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -414,14 +415,14 @@ class TableInsertColBeforeAction( html5.ext.Button ):
 							child.insertBefore( newTd, child.children.item(cellIdx) )
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.newcol.before" )
 
 	def resetLoadingState(self):
 		pass
 
 
-actionDelegateSelector.insert( 1, TableInsertColBeforeAction.isSuitableFor, TableInsertColBeforeAction )
+actionDelegateSelector.insert(1, TableInsertColBeforeAction.isSuitableFor, TableInsertColBeforeAction )
 
 class TableInsertColAfterAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -485,13 +486,13 @@ class TableInsertColAfterAction( html5.ext.Button ):
 								child.appendChild( newTd )
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.newcol.after" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TableInsertColAfterAction.isSuitableFor, TableInsertColAfterAction )
+actionDelegateSelector.insert(1, TableInsertColAfterAction.isSuitableFor, TableInsertColAfterAction )
 
 
 class TableRemoveRowAction( html5.ext.Button ):
@@ -514,13 +515,13 @@ class TableRemoveRowAction( html5.ext.Button ):
 			node = node.parentNode
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.remove.row" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TableRemoveRowAction.isSuitableFor, TableRemoveRowAction )
+actionDelegateSelector.insert(1, TableRemoveRowAction.isSuitableFor, TableRemoveRowAction )
 
 
 
@@ -578,13 +579,13 @@ class TableRemoveColAction( html5.ext.Button ):
 							child.removeChild(child.children.item(cellIdx))
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.table.remove.col" )
 
 	def resetLoadingState(self):
 		pass
 
-actionDelegateSelector.insert( 1, TableRemoveColAction.isSuitableFor, TableRemoveColAction )
+actionDelegateSelector.insert(1, TableRemoveColAction.isSuitableFor, TableRemoveColAction )
 '''
 
 class TextSaveAction( html5.ext.Button ):
@@ -597,10 +598,10 @@ class TextSaveAction( html5.ext.Button ):
 		self.parent().parent().saveText()
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.save" )
 
-actionDelegateSelector.insert( 1, TextSaveAction.isSuitableFor, TextSaveAction )
+actionDelegateSelector.insert(1, TextSaveAction.isSuitableFor, TextSaveAction )
 
 class TextAbortAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -619,10 +620,10 @@ class TextAbortAction( html5.ext.Button ):
 		self.parent().parent().abortText()
 
 	@staticmethod
-	def isSuitableFor( modul, handler, actionName ):
+	def isSuitableFor( module, handler, actionName ):
 		return( actionName=="text.abort" )
 
-actionDelegateSelector.insert( 1, TextAbortAction.isSuitableFor, TextAbortAction )
+actionDelegateSelector.insert(1, TextAbortAction.isSuitableFor, TextAbortAction )
 
 class LinkEditor( html5.Div ):
 	newLinkIdx = 0
@@ -799,23 +800,23 @@ class ImageEditor( html5.Div ):
 		self.linkTxt.focus()
 
 
-class TextUndoAction(BasicTextAction):
+class TextUndoAction(BasicEditorAction):
 	cmd = "undo"
 	title = translate("Undo the last action")
 
 	def onClick(self, sender = None):
 		self.parent().parent().editor.quill.history.undo()
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.undo", TextUndoAction )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.undo", TextUndoAction )
 
-class TextRedoAction( BasicTextAction ):
+class TextRedoAction( BasicEditorAction ):
 	cmd = "redo"
 	title = translate("Redo the last undone action")
 
 	def onClick(self, sender=None):
 		self.parent().parent().editor.quill.history.redo()
 
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.redo", TextRedoAction )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.redo", TextRedoAction )
 
 
 
@@ -846,7 +847,7 @@ class FlipViewAction( html5.ext.Button ):
 
 	def resetLoadingState(self):
 		pass
-actionDelegateSelector.insert( 1, lambda modul, handler, actionName: actionName=="text.flipView", FlipViewAction )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.flipView", FlipViewAction )
 
 
 
@@ -879,21 +880,14 @@ class Editor(html5.Div):
 		self.initial_txt = self.element.innerHTML = html
 		self.sinkEvent("onBlur", "onFocus")
 		parent.appendChild(self)
+		self.quill = None
 
 		DeferredCall(self.init)
 
 	def init(self):
 		self.quill = eval("""
-			new window.top.quill("#%s",
-				{
-
-					modules:
-					{
-						toolbar: "#%s",
-					}
-				})
-			""" % (self["id"], self.parent().actionbar["id"]))
-
+			new window.top.quill("#%s")
+			""" % self["id"])
 
 	def changed(self):
 		return self.initial_txt != self.element.innerHTML
