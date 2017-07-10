@@ -89,7 +89,7 @@ actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=
 class TextStyleJustifyCenter(BasicEditorAction):
 	cmd = "justifyCenter"
 	name = "align"
-	value = "center"
+	value = "Center"
 	title = translate("Justifiy Center")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyCenter", TextStyleJustifyCenter )
@@ -97,7 +97,7 @@ actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=
 class TextStyleJustifyLeft(BasicEditorAction):
 	cmd = "justifyLeft"
 	name = "align"
-	value = ""
+	value = "Left"
 	title = translate("Justifiy Left")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyLeft", TextStyleJustifyLeft )
@@ -105,11 +105,18 @@ actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=
 class TextStyleJustifyRight(BasicEditorAction):
 	cmd = "justifyRight"
 	name = "align"
-	value = "right"
+	value = "Right"
 	title = translate("Justifiy Right")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyRight", TextStyleJustifyRight )
 
+class TextStyleJustifyRight(BasicEditorAction):
+	cmd = "justifyBlock"
+	name = "align"
+	value = "Justify"
+	title = translate("Block")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyBlock", TextStyleJustifyRight )
 
 class TextInsertOrderedList(BasicEditorAction):
 	cmd = "insertOrderedList"
@@ -914,11 +921,12 @@ class Wysiwyg( html5.Div ):
 		self.abortTextEvent = EventDispatcher("abortText")
 		self.textActions = ["style.text.bold",
 		                    "style.text.italic"]+\
-		                   ["style.text.h%s" % x for x in range(0,4)]+\
+		                   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
 		                   ["text.removeformat",
 							"style.text.justifyCenter",
 							"style.text.justifyLeft",
 							"style.text.justifyRight",
+							"style.text.justifyBlock",
 			                "style.text.blockquote",
 			                "text.orderedList",
 			                "text.unorderedList",
