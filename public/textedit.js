@@ -157,6 +157,89 @@ Quill.register(HeaderBlot, true);
 
 // Align
 var alignOptions = { scope: Parchment.Scope.BLOCK, whitelist: ["Left", "Right", "Center", "Justify"] };
-var AlignClass = new Parchment.Attributor.Class("align", "vitxt-a", alignOptions);
+var AlignClass = new Parchment.Attributor.Class("align", "vitxt-a" + alignOptions);
 Quill.register({ "attributors/class/align": AlignClass,
     "formats/align": AlignClass }, true);
+
+// List
+
+var ListBlot = function (_Quill$import6) {
+    _inherits(ListBlot, _Quill$import6);
+
+    function ListBlot() {
+        _classCallCheck(this, ListBlot);
+
+        return _possibleConstructorReturn(this, (ListBlot.__proto__ || Object.getPrototypeOf(ListBlot)).apply(this, arguments));
+    }
+
+    _createClass(ListBlot, null, [{
+        key: "create",
+        value: function create(value) {
+            var node = _get(ListBlot.__proto__ || Object.getPrototypeOf(ListBlot), "create", this).call(this, value);
+            if (value == "ordered") {
+                node.setAttribute("class", "vitxt-list vitxt-listOrder");
+            } else if (value == "bullet") {
+                node.setAttribute("class", "vitxt-list vitxt-listUnorder");
+            }
+
+            return node;
+        }
+    }]);
+
+    return ListBlot;
+}(Quill.import("formats/list"));
+
+Quill.register(ListBlot, true);
+
+// List Item
+
+var ListItemBlot = function (_Quill$import7) {
+    _inherits(ListItemBlot, _Quill$import7);
+
+    function ListItemBlot() {
+        _classCallCheck(this, ListItemBlot);
+
+        return _possibleConstructorReturn(this, (ListItemBlot.__proto__ || Object.getPrototypeOf(ListItemBlot)).apply(this, arguments));
+    }
+
+    _createClass(ListItemBlot, null, [{
+        key: "create",
+        value: function create(value) {
+            var node = _get(ListItemBlot.__proto__ || Object.getPrototypeOf(ListItemBlot), "create", this).call(this, value);
+            node.setAttribute("class", "vitxt-listItem");
+
+            return node;
+        }
+    }]);
+
+    return ListItemBlot;
+}(Quill.import("formats/list/item"));
+
+Quill.register(ListItemBlot, true);
+
+// Indent #FIXME
+
+var IndentBlot = function (_Quill$import8) {
+    _inherits(IndentBlot, _Quill$import8);
+
+    function IndentBlot() {
+        _classCallCheck(this, IndentBlot);
+
+        return _possibleConstructorReturn(this, (IndentBlot.__proto__ || Object.getPrototypeOf(IndentBlot)).apply(this, arguments));
+    }
+
+    _createClass(IndentBlot, null, [{
+        key: "create",
+        value: function create(value) {
+            var node = _get(IndentBlot.__proto__ || Object.getPrototypeOf(IndentBlot), "create", this).call(this, value);
+            node.setAttribute("class", "vitxt-indent");
+
+            return node;
+        }
+    }]);
+
+    return IndentBlot;
+}(Quill.import("formats/indent"));
+
+Quill.register({
+    "formats/indent": IndentBlot }, true);

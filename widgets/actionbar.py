@@ -6,6 +6,8 @@ from config import conf
 from i18n import translate
 
 class ActionBar( html5.Div ):
+	__actionBarCount__ = 0
+
 	"""
 		Provides the container for actions (add,edit,..) suitable for one module (eg. for lists).
 	"""
@@ -17,6 +19,9 @@ class ActionBar( html5.Div ):
 			@type appType: String
 		"""
 		super(ActionBar, self).__init__()
+
+		self["id"] = "actionbar%d" % ActionBar.__actionBarCount__
+		ActionBar.__actionBarCount__ += 1
 
 		self.actions = []
 		self.widgets = {}

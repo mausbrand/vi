@@ -88,3 +88,56 @@ let alignOptions = { scope: Parchment.Scope.BLOCK, whitelist: ["Left", "Right", 
 let AlignClass = new Parchment.Attributor.Class("align", "vitxt-a", alignOptions);
 Quill.register({"attributors/class/align": AlignClass,
                 "formats/align": AlignClass}, true);
+
+
+// List
+class ListBlot extends Quill.import("formats/list")
+{
+    static create(value)
+    {
+        let node = super.create(value);
+        if (value == "ordered")
+        {
+            node.setAttribute("class", "vitxt-list vitxt-listOrder");
+        }
+        else if (value == "bullet")
+        {
+            node.setAttribute("class", "vitxt-list vitxt-listUnorder");
+        }
+
+        return node;
+    }
+}
+
+Quill.register(ListBlot, true);
+
+// List Item
+class ListItemBlot extends Quill.import("formats/list/item")
+{
+    static create(value)
+    {
+        let node = super.create(value);
+        node.setAttribute("class", "vitxt-listItem");
+
+        return node;
+    }
+}
+
+Quill.register(ListItemBlot, true);
+
+
+// Indent #FIXME
+class IndentBlot extends Quill.import("formats/indent")
+{
+    static create(value)
+    {
+        let node = super.create(value);
+        node.setAttribute("class", "vitxt-indent");
+
+        return node;
+    }
+}
+
+Quill.register({
+                "formats/indent": IndentBlot}, true);
+

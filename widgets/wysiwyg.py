@@ -20,15 +20,21 @@ class BasicEditorAction(html5.ext.Button):
 	def __init__(self, *args, **kwargs):
 		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
 
-		self.addClass("icon", "text", "style", self.cmd)
+		self.addClass("icon", "text", "style", self.cmd, "ql-%s" % self.name)
 
 		if self.title:
 			self["title"] = self.title
+
+		if self.value:
+			self["value"] = self.value
 
 	def getQuill(self):
 		return self.parent().parent().editor.quill
 
 	def onClick(self, sender = None):
+		return
+
+
 		q = self.getQuill()
 
 		fmt = q.getFormat()
@@ -40,7 +46,6 @@ class BasicEditorAction(html5.ext.Button):
 			value = self.value
 
 		print(self.name, value)
-
 		q.format(self.name, value)
 
 class TextStyleBold(BasicEditorAction):
@@ -59,7 +64,6 @@ class TextStyleH1(BasicEditorAction):
 	cmd = "H1"
 	name = "header"
 	value = 1
-
 	title = translate("H1")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h1", TextStyleH1 )
@@ -79,6 +83,14 @@ class TextStyleH3(BasicEditorAction):
 	title = translate("H3")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h3", TextStyleH3 )
+
+class TextStyleH4(BasicEditorAction):
+	cmd = "H4"
+	name = "header"
+	value = 4
+	title = translate("H4")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.h4", TextStyleH4 )
 
 class TextStyleBlockQuote(BasicEditorAction):
 	name = cmd = "blockquote"
@@ -893,8 +905,15 @@ class Editor(html5.Div):
 
 	def init(self):
 		self.quill = eval("""
-			new window.top.quill("#%s")
-			""" % self["id"])
+					new window.top.quill("#%s",
+						{
+
+							modules:
+							{
+								toolbar: "#%s",
+							}
+						})
+					""" % (self["id"], self.parent().actionbar["id"]))
 
 	def changed(self):
 		return self.initial_txt != self.element.innerHTML
