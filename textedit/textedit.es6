@@ -126,18 +126,18 @@ class ListItemBlot extends Quill.import("formats/list/item")
 Quill.register(ListItemBlot, true);
 
 
-// Indent #FIXME
-class IndentBlot extends Quill.import("formats/indent")
+// Indent
+class IndentBlot extends Quill.import("formats/block")
 {
     static create(value)
     {
         let node = super.create(value);
         node.setAttribute("class", "vitxt-indent");
-
         return node;
     }
 }
 
-Quill.register({
-                "formats/indent": IndentBlot}, true);
+IndentBlot.blotName = "indent";
+IndentBlot.tagName = "div";
 
+Quill.register(IndentBlot, true);
