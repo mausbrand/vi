@@ -60,6 +60,22 @@ class TextStyleItalic(BasicEditorAction):
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
 
+class TextStyleSuper(BasicEditorAction):
+	cmd = "super"
+	name = "subsuper"
+	value = "Super"
+	title = translate("Super")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.super", TextStyleSuper )
+
+class TextStyleSub(BasicEditorAction):
+	cmd = "sub"
+	name = "subsuper"
+	value = "Sub"
+	title = translate("Sub")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.sub", TextStyleSub )
+
 class TextStyleH1(BasicEditorAction):
 	cmd = "H1"
 	name = "header"
@@ -145,13 +161,6 @@ class TextInsertUnorderedList(BasicEditorAction):
 	title = translate("Insert an unordered List")
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.unorderedList", TextInsertUnorderedList )
 
-class TextIndent(BasicEditorAction):
-	name = cmd = "indent"
-	value = "+1"
-	title = translate("Indent more")
-
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.indent", TextIndent )
-
 class TextOutdent(BasicEditorAction):
 	cmd = "outdent"
 	name = "indent"
@@ -159,6 +168,13 @@ class TextOutdent(BasicEditorAction):
 	title = translate("Indent less")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.outdent", TextOutdent )
+
+class TextIndent(BasicEditorAction):
+	name = cmd = "indent"
+	value = "+1"
+	title = translate("Indent more")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.indent", TextIndent )
 
 class TextRemoveFormat(BasicEditorAction):
 	cmd = "removeformat"
@@ -939,11 +955,13 @@ class Wysiwyg( html5.Div ):
 		self.saveTextEvent = EventDispatcher("saveText")
 		self.abortTextEvent = EventDispatcher("abortText")
 		self.textActions = ["style.text.bold",
-		                    "style.text.italic"]+\
+		                    "style.text.italic",
+							"style.text.super",
+							"style.text.sub"]+\
 		                   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
 		                   ["text.removeformat",
-							"style.text.justifyCenter",
 							"style.text.justifyLeft",
+							"style.text.justifyCenter",
 							"style.text.justifyRight",
 							"style.text.justifyBlock",
 			                "style.text.blockquote",

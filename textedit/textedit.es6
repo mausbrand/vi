@@ -48,6 +48,33 @@ ItalicBlot.tagName = "em";
 
 Quill.register(ItalicBlot, true);
 
+
+
+// Super & Sub
+class SuperSubBlot extends Quill.import("blots/inline")
+{
+    static create(value)
+    {
+        if (value == "Super")
+        {
+            SuperSubBlot.tagName = "sup";
+        }
+        else if (value == "Sub")
+        {
+            SuperSubBlot.tagName = "sub";
+        }
+
+        let node = super.create(value);
+        node.setAttribute("class", "vitxt-f" + value);
+        
+        return node;
+    }
+}
+
+SuperSubBlot.blotName = "subsuper";
+
+Quill.register(SuperSubBlot, true);
+
 // Blockquote
 class BlockquoteBlot extends Quill.import("formats/blockquote")
 {
@@ -127,7 +154,7 @@ Quill.register(ListItemBlot, true);
 
 
 // Indent
-class IndentBlot extends Quill.import("formats/block")
+class IndentBlot extends Quill.import("blots/block")
 {
     static create(value)
     {

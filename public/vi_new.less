@@ -73,16 +73,29 @@ p a:visited {
   margin-bottom: 1em;
  }
 
-.vitxt-aLeft {text-align: left;}
-.vitxt-aRight {text-align: right;}
-.vitxt-aCenter {text-align: center;}
-.vitxt-aJustify {text-align: justify;}
+.vitxt-a-Left {text-align: left;}
+.vitxt-a-Right {text-align: right;}
+.vitxt-a-Center {text-align: center;}
+.vitxt-a-Justify {text-align: justify;}
 
 .vitxt-indent {padding-left: 1.5em;}
 
 .vitxt-fBold {font-weight: 700;}
 
 .vitxt-fItalic {font-style: italic;}
+
+.vitxt-fSuper, .vitxt-fSub {
+    font-size: .65em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+}
+.vitxt-fSuper {
+    top: -.5em;
+}
+.vitxt-fSub {
+  bottom: -.25em;
+}
 
 .vitxt-tQuote {
   font-style: italic;

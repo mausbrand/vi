@@ -96,10 +96,76 @@ ItalicBlot.tagName = "em";
 
 Quill.register(ItalicBlot, true);
 
+// Header
+
+var SuperSubBlot = function (_Quill$import4) {
+    _inherits(SuperSubBlot, _Quill$import4);
+
+    function SuperSubBlot() {
+        _classCallCheck(this, SuperSubBlot);
+
+        return _possibleConstructorReturn(this, (SuperSubBlot.__proto__ || Object.getPrototypeOf(SuperSubBlot)).apply(this, arguments));
+    }
+
+    _createClass(SuperSubBlot, null, [{
+        key: "create",
+        value: function create(value) {
+            if (value == "Super") {
+                SuperSubBlot.tagName = "sup";
+            } else if (value == "Sub") {
+                SuperSubBlot.tagName = "sub";
+            }
+
+            var node = _get(SuperSubBlot.__proto__ || Object.getPrototypeOf(SuperSubBlot), "create", this).call(this, value);
+            node.setAttribute("class", "vitxt-f" + value);
+
+            return node;
+        }
+    }]);
+
+    return SuperSubBlot;
+}(Quill.import("blots/inline"));
+
+SuperSubBlot.blotName = "subsuper";
+
+Quill.register(SuperSubBlot, true);
+/*
+// Super / Sub
+class SuperBlot extends Quill.import("formats/bold")
+{
+    static create(value)
+    {
+        let node = super.create(value);
+        node.setAttribute("class", "vitxt-f" + value);
+
+        SuperBlot.blotName = "foo";
+        SuperBlot.tagName = "bar";
+
+        return node;
+    }
+}
+
+Quill.register(SuperBlot, true);
+// Sub
+class SubBlot extends Quill.import("formats/bold")
+{
+    static create(value)
+    {
+        let node = super.create(value);
+        node.setAttribute("class", "vitxt-fSub");
+        return node;
+    }
+}
+
+SubBlot.blotName = "sub";
+SubBlot.tagName = "sub";
+
+Quill.register(SubBlot, true);
+*/
 // Blockquote
 
-var BlockquoteBlot = function (_Quill$import4) {
-    _inherits(BlockquoteBlot, _Quill$import4);
+var BlockquoteBlot = function (_Quill$import5) {
+    _inherits(BlockquoteBlot, _Quill$import5);
 
     function BlockquoteBlot() {
         _classCallCheck(this, BlockquoteBlot);
@@ -123,8 +189,8 @@ Quill.register(BlockquoteBlot, true);
 
 // Header
 
-var HeaderBlot = function (_Quill$import5) {
-    _inherits(HeaderBlot, _Quill$import5);
+var HeaderBlot = function (_Quill$import6) {
+    _inherits(HeaderBlot, _Quill$import6);
 
     function HeaderBlot() {
         _classCallCheck(this, HeaderBlot);
@@ -163,8 +229,8 @@ Quill.register({ "attributors/class/align": AlignClass,
 
 // List
 
-var ListBlot = function (_Quill$import6) {
-    _inherits(ListBlot, _Quill$import6);
+var ListBlot = function (_Quill$import7) {
+    _inherits(ListBlot, _Quill$import7);
 
     function ListBlot() {
         _classCallCheck(this, ListBlot);
@@ -193,8 +259,8 @@ Quill.register(ListBlot, true);
 
 // List Item
 
-var ListItemBlot = function (_Quill$import7) {
-    _inherits(ListItemBlot, _Quill$import7);
+var ListItemBlot = function (_Quill$import8) {
+    _inherits(ListItemBlot, _Quill$import8);
 
     function ListItemBlot() {
         _classCallCheck(this, ListItemBlot);
@@ -219,8 +285,8 @@ Quill.register(ListItemBlot, true);
 
 // Indent
 
-var IndentBlot = function (_Quill$import8) {
-    _inherits(IndentBlot, _Quill$import8);
+var IndentBlot = function (_Quill$import9) {
+    _inherits(IndentBlot, _Quill$import9);
 
     function IndentBlot() {
         _classCallCheck(this, IndentBlot);
@@ -238,7 +304,7 @@ var IndentBlot = function (_Quill$import8) {
     }]);
 
     return IndentBlot;
-}(Quill.import("formats/block"));
+}(Quill.import("blots/block"));
 
 IndentBlot.blotName = "indent";
 IndentBlot.tagName = "div";
