@@ -20,21 +20,18 @@ class BasicEditorAction(html5.ext.Button):
 	def __init__(self, *args, **kwargs):
 		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
 
-		self.addClass("icon", "text", "style", self.cmd, "ql-%s" % self.name)
+		self.addClass("icon", "text", "style", self.cmd) #, "ql-%s" % self.name)
 
 		if self.title:
 			self["title"] = self.title
 
-		if self.value:
-			self["value"] = self.value
+		#if self.value:
+		#	self["value"] = self.value
 
 	def getQuill(self):
 		return self.parent().parent().editor.quill
 
 	def onClick(self, sender = None):
-		return
-
-
 		q = self.getQuill()
 
 		fmt = q.getFormat()
@@ -180,6 +177,14 @@ class TextRemoveFormat(BasicEditorAction):
 	cmd = "removeformat"
 	name = "clean"
 	title = translate("Remove all formatting")
+
+	def onClick(self, sender = None):
+		q = self.getQuill()
+
+		r = q.getSelection()
+		if r.length > 0:
+		   	q.removeFormat(r.index, r.length, "user")
+		   	q.removeFormat(r.index, r.length, "user")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
 
@@ -967,8 +972,8 @@ class Wysiwyg( html5.Div ):
 			                "style.text.blockquote",
 			                "text.orderedList",
 			                "text.unorderedList",
-			                "text.indent",
 			                "text.outdent",
+			                "text.indent",
 			                "text.image",
 			                "text.link",
 			                "text.table",
