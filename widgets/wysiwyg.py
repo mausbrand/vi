@@ -142,7 +142,7 @@ class TextStyleJustifyRight(BasicEditorAction):
 	cmd = "justifyBlock"
 	name = "align"
 	value = "Justify"
-	title = translate("Block")
+	title = translate("Justifiy Full")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyBlock", TextStyleJustifyRight )
 

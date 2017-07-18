@@ -96,7 +96,7 @@ ItalicBlot.tagName = "em";
 
 Quill.register(ItalicBlot, true);
 
-// Header
+// Super & Sub
 
 var SuperSubBlot = function (_Quill$import4) {
     _inherits(SuperSubBlot, _Quill$import4);
@@ -129,39 +129,7 @@ var SuperSubBlot = function (_Quill$import4) {
 SuperSubBlot.blotName = "subsuper";
 
 Quill.register(SuperSubBlot, true);
-/*
-// Super / Sub
-class SuperBlot extends Quill.import("formats/bold")
-{
-    static create(value)
-    {
-        let node = super.create(value);
-        node.setAttribute("class", "vitxt-f" + value);
 
-        SuperBlot.blotName = "foo";
-        SuperBlot.tagName = "bar";
-
-        return node;
-    }
-}
-
-Quill.register(SuperBlot, true);
-// Sub
-class SubBlot extends Quill.import("formats/bold")
-{
-    static create(value)
-    {
-        let node = super.create(value);
-        node.setAttribute("class", "vitxt-fSub");
-        return node;
-    }
-}
-
-SubBlot.blotName = "sub";
-SubBlot.tagName = "sub";
-
-Quill.register(SubBlot, true);
-*/
 // Blockquote
 
 var BlockquoteBlot = function (_Quill$import5) {
