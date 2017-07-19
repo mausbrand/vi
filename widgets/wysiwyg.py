@@ -52,7 +52,10 @@ class BasicEditorAction(html5.ext.Button):
 		self.parent().parent().editor.editorChangeEvent.unregister(self)
 
 	def onEditorChange(self):
-		fmt = self.getQuill().getFormat()
+		try:
+			fmt = self.getQuill().getFormat()
+		except:
+			return
 		
 		self.removeClass("is-active")
 		if getattr(fmt, self.name, None):
@@ -240,19 +243,18 @@ class TextInsertImageAction(BasicEditorAction):
 actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
 '''
 
-'''
+
 class TextInsertLinkAction(BasicEditorAction):
+	name = cmd = "link"
+
 	newLinkIdx = 0
-	def __init__(self, *args, **kwargs):
-		super( TextInsertLinkAction, self ).__init__( translate("Insert Link"), *args, **kwargs )
-		self["class"] = "icon text link"
-		self["title"] = translate("Insert Link")
 
 	def onClick(self, sender=None):
-		newLinkTarget = "#linkidx-%s-%s" % (TextInsertLinkAction.newLinkIdx, time() )
+		href = getattr(self.getQuill().getFormat(), self.name, "")
+		html5.ext.InputDialog("URL", successHandler=self.onLinkAvailable, value=href)
 
-		self.execCommand("createLink", "#%s" % newLinkTarget)
-		self.parent().parent().linkEditor.openLink(newLinkTarget)
+	def onLinkAvailable(self, dialog, href):
+		self.getQuill().format("link", href)
 
 	def createLink(self, dialog, value):
 		if value:
@@ -266,7 +268,7 @@ class TextInsertLinkAction(BasicEditorAction):
 		pass
 
 actionDelegateSelector.insert(1, TextInsertLinkAction.isSuitableFor, TextInsertLinkAction )
-'''
+
 
 '''
 class CreateTablePopup( html5.ext.Popup ):
@@ -698,7 +700,7 @@ class LinkEditor( html5.Div ):
 		l = html5.Label(translate("New window"), forElem=self.newTab)
 		l["class"].append("newwindowlbl")
 		self.appendChild( l )
-		self.currentElem = None
+		self.caller = None
 
 	def getAFromTagStack(self, tagStack):
 		for elem in tagStack:
@@ -718,26 +720,24 @@ class LinkEditor( html5.Div ):
 		elif self.currentElem is not None and newElem is None:
 			self.doClose()
 
-	def doOpen(self, elem):
-		self.currentElem = elem
-		self.linkTxt["value"] = self.currentElem.href
-		self.newTab["checked"] = self.currentElem.target=="_blank"
+	def doOpen(self, caller, href):
+		self.caller = caller
+		self.linkTxt["value"] = href
+		#self.newTab["checked"] = self.currentElem.target=="_blank"
 
 		self.isOpen = True
 		self["style"]["display"] = "block"
 
 	def doClose(self):
-		if self.currentElem is None:
-			return
-		self.currentElem.href = self.linkTxt["value"]
+		self.caller.onLinkAvailable(self.linkTxt["value"])
 
-		if self.newTab["checked"]:
-			self.currentElem.target = "_blank"
-		else:
-			self.currentElem.target = "_self"
+		#if self.newTab["checked"]:
+		#	self.currentElem.target = "_blank"
+		#else:
+		#	self.currentElem.target = "_self"
 
 		self["style"]["display"] = "none"
-		self.currentElem = None
+		self.caller = None
 
 	def findHref(self, linkTarget, elem):
 		if "tagName" in dir(elem):
@@ -752,8 +752,8 @@ class LinkEditor( html5.Div ):
 					return( r )
 		return( None )
 
-	def openLink(self, linkTarget):
-		self.doOpen( self.findHref( linkTarget, self.parent().editor.element ) )
+	def openLink(self, caller, href = ""):
+		self.doOpen(caller, href)
 		self.linkTxt["value"] = ""
 		self.linkTxt.focus()
 
