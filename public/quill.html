@@ -52,7 +52,7 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-    <script src="//cdn.quilljs.com/latest/quill.js"></script>
+    <script type="text/javascript" src="quill.min.js"></script>
     <script type="text/javascript" src="textedit.js"></script>
     <script type="text/javascript">
         var quill = Quill;
@@ -67,29 +67,29 @@
         <div>
             <div id="actionbar0" class="actionbar ql-toolbar">
                 <h3 class="modul_None apptype_None action_Text Editor">Text Editor</h3>
-                <button class="button icon text style bold" type="button" title="Fett">bold</button>
-                <button class="button icon text style italic" type="button" title="Kursiv">italic</button>
-                <button class="button icon text style super" type="button" title="Hochgestellt">super</button>
-                <button class="button icon text style sub" type="button" title="Tiefgestellt">sub</button>
-                <button class="button icon text style H1" type="button" title="H1">H1</button>
-                <button class="button icon text style H2" type="button" title="H2">H2</button>
-                <button class="button icon text style H3" type="button" title="H3">H3</button>
-                <button class="button icon text style H4" type="button" title="H4">H4</button>
-                <button class="button icon text style removeformat" type="button" title="Gesamte Formatierung löschen">removeformat</button>
-                <button class="button icon text style justifyLeft" type="button" title="Links ausrichten">justifyLeft</button>
-                <button class="button icon text style justifyCenter" type="button" title="Zentrieren">justifyCenter</button>
-                <button class="button icon text style justifyRight" type="button" title="Rechts ausrichten">justifyRight</button>
-                <button class="button icon text style justifyBlock" type="button" title="Blocksatz">justifyBlock</button>
-                <button class="button icon text style blockquote" type="button" title="Zitat">blockquote</button>
-                <button class="button icon text style insertOrderedList" type="button" title="Sortierte Liste">insertOrderedList</button>
-                <button class="button icon text style insertUnorderedList" type="button" title="Unsortierte Liste">insertUnorderedList</button>
-                <button class="button icon text style indent" type="button" title="Weiter einrücken">indent</button>
-                <button class="button icon text style outdent" type="button" title="Weniger einrücken">outdent</button>
-                <button class="icon flipview is_wysiwyg" type="button" title="Quellcode- / Textansicht wechseln">Quellcode- / Textansicht wechseln</button>
-                <button class="button icon text style undo" type="button" title="Rückgängig">undo</button>
-                <button class="button icon text style redo" type="button" title="Wiederholen">redo</button>
-                <button class="icon text abort" type="button" title="Abbrechen">Abbrechen</button>
-                <button class="icon text save" type="button" title="Speichern">Speichern</button>
+                <button data-group="bold" data-value="true" class="button icon text style bold" type="button" title="Fett">bold</button>
+                <button data-group="italic" data-value="true" class="button icon text style italic" type="button" title="Kursiv">italic</button>
+                <button data-group="supersub" data-value="true" class="button icon text style super" type="button" title="Hochgestellt">super</button>
+                <button data-group="supersub" data-value="true" class="button icon text style sub" type="button" title="Tiefgestellt">sub</button>
+                <button data-group="header" data-value="1" class="button icon text style H1" type="button" title="H1">H1</button>
+                <button data-group="header" data-value="2" class="button icon text style H2" type="button" title="H2">H2</button>
+                <button data-group="header" data-value="3" class="button icon text style H3" type="button" title="H3">H3</button>
+                <button data-group="header" data-value="4" class="button icon text style H4" type="button" title="H4">H4</button>
+                <button data-group="" data-value="" class="button icon text style removeformat" type="button" title="Gesamte Formatierung löschen">removeformat</button>
+                <button data-group="align" data-value="Left" class="button icon text style justifyLeft" type="button" title="Links ausrichten">justifyLeft</button>
+                <button data-group="align" data-value="Center" class="button icon text style justifyCenter" type="button" title="Zentrieren">justifyCenter</button>
+                <button data-group="align" data-value="Right" class="button icon text style justifyRight" type="button" title="Rechts ausrichten">justifyRight</button>
+                <button data-group="align" data-value="Block" class="button icon text style justifyBlock" type="button" title="Blocksatz">justifyBlock</button>
+                <button data-group="blockquote" data-value="true" class="button icon text style blockquote" type="button" title="Zitat">blockquote</button>
+                <button data-group="list" data-value="ordered" class="button icon text style insertOrderedList" type="button" title="Sortierte Liste">insertOrderedList</button>
+                <button data-group="list" data-value="bulled" class="button icon text style insertUnorderedList" type="button" title="Unsortierte Liste">insertUnorderedList</button>
+                <button data-group="indent" data-value="indent" class="button icon text style indent" type="button" title="Weiter einrücken">indent</button>
+                <button data-group="indent" data-value="outdent" class="button icon text style outdent" type="button" title="Weniger einrücken">outdent</button>
+                <button data-group="" data-value="" class="icon flipview is_wysiwyg" type="button" title="Quellcode- / Textansicht wechseln">Quellcode- / Textansicht wechseln</button>
+                <button data-group="" data-value="" class="button icon text style undo" type="button" title="Rückgängig">undo</button>
+                <button data-group="" data-value="" class="button icon text style redo" type="button" title="Wiederholen">redo</button>
+                <button data-group="" data-value="" class="icon text abort" type="button" title="Abbrechen">Abbrechen</button>
+                <button data-group="" data-value="" class="icon text save" type="button" title="Speichern">Speichern</button>
             </div>
             <div class="tableeditor" style="display: none;">
             </div>

@@ -22,8 +22,7 @@ $(function() {
 		if(name == "removeformat") {
 			var r = editor.getSelection();
 			if (r.length > 0) {
-			   	editor.removeFormat(r.index, r.length, "user")
-			   	editor.removeFormat(r.index, r.length, "user")
+				editor.removeFormat(r.index, r.length, "user")
 			}
 			return;
 		}
@@ -34,6 +33,19 @@ $(function() {
 			return editor.history.redo();
 		}
 		
-		editor.format(name, value);
+		editor.format(name, value, "user");
 	});
+
+	editor.on('editor-change', function(range, oldRange, source) {
+		if (range) {
+			var fmt = editor.getFormat();
+			console.log(fmt);
+
+			$( '.button' ).removeClass('is-active');
+			$.each( fmt, function( key, value ) {
+				$( '.button[data-group="' + key + '"][data-value="' + value + '"]').addClass('is-active');
+			});
+		}
+	});
+
 });

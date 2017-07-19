@@ -28,7 +28,7 @@ class BoldBlot extends Quill.import("formats/bold")
 }
 
 BoldBlot.blotName = "bold";
-BoldBlot.tagName = "strong";
+BoldBlot.tagName = ["strong"];
 
 Quill.register(BoldBlot, true);
 
@@ -44,7 +44,7 @@ class ItalicBlot extends Quill.import("formats/italic")
 }
 
 ItalicBlot.blotName = "italic";
-ItalicBlot.tagName = "em";
+ItalicBlot.tagName = ["em"];
 
 Quill.register(ItalicBlot, true);
 
@@ -55,22 +55,18 @@ class SuperSubBlot extends Quill.import("blots/inline")
 {
     static create(value)
     {
-        if (value == "Super")
-        {
-            SuperSubBlot.tagName = "sup";
-        }
-        else if (value == "Sub")
-        {
-            SuperSubBlot.tagName = "sub";
-        }
-
         let node = super.create(value);
         node.setAttribute("class", "vitxt-f" + value);
         
         return node;
     }
+    static formats(domNode) {
+        return domNode.tagName.charAt(0).toUpperCase() +
+            domNode.tagName.slice(1).toLowerCase();
+    }
 }
 
+SuperSubBlot.tagName = ["sub", "sup"];
 SuperSubBlot.blotName = "subsuper";
 
 Quill.register(SuperSubBlot, true);

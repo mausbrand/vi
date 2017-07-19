@@ -64,7 +64,7 @@ var BoldBlot = function (_Quill$import2) {
 }(Quill.import("formats/bold"));
 
 BoldBlot.blotName = "bold";
-BoldBlot.tagName = "strong";
+BoldBlot.tagName = ["strong"];
 
 Quill.register(BoldBlot, true);
 
@@ -92,7 +92,7 @@ var ItalicBlot = function (_Quill$import3) {
 }(Quill.import("formats/italic"));
 
 ItalicBlot.blotName = "italic";
-ItalicBlot.tagName = "em";
+ItalicBlot.tagName = ["em"];
 
 Quill.register(ItalicBlot, true);
 
@@ -110,22 +110,22 @@ var SuperSubBlot = function (_Quill$import4) {
     _createClass(SuperSubBlot, null, [{
         key: "create",
         value: function create(value) {
-            if (value == "Super") {
-                SuperSubBlot.tagName = "sup";
-            } else if (value == "Sub") {
-                SuperSubBlot.tagName = "sub";
-            }
-
             var node = _get(SuperSubBlot.__proto__ || Object.getPrototypeOf(SuperSubBlot), "create", this).call(this, value);
             node.setAttribute("class", "vitxt-f" + value);
 
             return node;
+        }
+    }, {
+        key: "formats",
+        value: function formats(domNode) {
+            return domNode.tagName.charAt(0).toUpperCase() + domNode.tagName.slice(1).toLowerCase();
         }
     }]);
 
     return SuperSubBlot;
 }(Quill.import("blots/inline"));
 
+SuperSubBlot.tagName = ["sub", "sup"];
 SuperSubBlot.blotName = "subsuper";
 
 Quill.register(SuperSubBlot, true);

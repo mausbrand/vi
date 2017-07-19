@@ -45,6 +45,22 @@ class BasicEditorAction(html5.ext.Button):
 		print(self.name, value)
 		q.format(self.name, value)
 
+	def onAttach(self):
+		self.parent().parent().editor.editorChangeEvent.register(self)
+
+	def onDetach(self):
+		self.parent().parent().editor.editorChangeEvent.unregister(self)
+
+	def onEditorChange(self):
+		fmt = self.getQuill().getFormat()
+		
+		self.removeClass("is-active")
+		if getattr(fmt, self.name, None):
+			value = getattr(fmt, self.name, None)
+			if value == "True" or self.value == value:
+				self.addClass("is-active")
+
+
 class TextStyleBold(BasicEditorAction):
 	name = cmd = "bold"
 	title = translate("Bold")
@@ -58,15 +74,15 @@ class TextStyleItalic(BasicEditorAction):
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.italic", TextStyleItalic )
 
 class TextStyleSuper(BasicEditorAction):
-	cmd = "super"
+	cmd = "Super"
 	name = "subsuper"
-	value = "Super"
+	value = "Sup"
 	title = translate("Super")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.super", TextStyleSuper )
 
 class TextStyleSub(BasicEditorAction):
-	cmd = "sub"
+	cmd = "Sub"
 	name = "subsuper"
 	value = "Sub"
 	title = translate("Sub")
@@ -183,7 +199,6 @@ class TextRemoveFormat(BasicEditorAction):
 
 		r = q.getSelection()
 		if r.length > 0:
-		   	q.removeFormat(r.index, r.length, "user")
 		   	q.removeFormat(r.index, r.length, "user")
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
@@ -922,6 +937,7 @@ class Editor(html5.Div):
 		parent.appendChild(self)
 		self.quill = None
 
+		self.editorChangeEvent = EventDispatcher("editorChange")
 		DeferredCall(self.init)
 
 	def init(self):
@@ -936,8 +952,16 @@ class Editor(html5.Div):
 						})
 					""" % (self["id"], self.parent().actionbar["id"]))
 
+		self.quill.on("editor-change", self.updateActionBar)
+
 	def changed(self):
 		return self.initial_txt != self.element.innerHTML
+
+	def updateActionBar(self, *args, **kwargs):
+		print("CHANGE!")
+		print(args)
+		print(kwargs)
+		self.editorChangeEvent.fire()
 
 	def execCommand(self, commandName, valueArgument=None):
 		"""
