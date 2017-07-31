@@ -223,12 +223,11 @@ class TextRemoveFormat(BasicEditorAction):
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
 
-'''
+
+#FIXME:
 class TextInsertImageAction(BasicEditorAction):
-	def __init__(self, *args, **kwargs):
-		super( TextInsertImageAction, self ).__init__( translate("Insert Image"), *args, **kwargs )
-		self["class"] = "icon text image"
-		self["title"] = translate("Insert Image")
+	name = cmd = "image"
+	title = translate("Insert Image")
 
 	def onClick(self, sender=None):
 		currentSelector = FileWidget( "file", isSelector=True )
@@ -258,7 +257,7 @@ class TextInsertImageAction(BasicEditorAction):
 		pass
 
 actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
-'''
+
 
 
 class TextInsertLinkAction(BasicEditorAction):
@@ -1054,74 +1053,96 @@ class Wysiwyg( html5.Div ):
 		self.lastMousePos = None
 		self.sinkEvent("onMouseDown", "onMouseUp", "onMouseMove", "onClick")
 
+		self.source = html5.form.Textarea()
+		self.source["class"].append("sourceCode")
+		self.source["class"].append("hide")
+		self.appendChild(self.source)
+
 	def flipView(self, *args, **kwargs ):
-		htmlStr = self.editor.element.innerHTML
+		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
+
 		if self.isWysiwygMode:
-			self.imgEditor.doClose()
-			self.linkEditor.doClose()
-			self.tableDiv["style"]["display"] = None
+		#	FIXME: doesnt work with new texteditor so far
+		#	self.imgEditor.doClose()
+		#	self.linkEditor.doClose()
+		#	self.tableDiv["style"]["display"] = None
 			outStr = ""
 			indent = 0
-			indestStr = "&nbsp;&nbsp;&nbsp;"
-			inStr = htmlStr.replace("&", "&amp;" ).replace("<", "&lt;" ).replace(">","&gt;")
+			indestStr = "    "
+			inStr = htmlStr
 			while inStr:
-				if inStr.startswith("&lt;div&gt;"):
-					outStr += "<br>"
+				if inStr.startswith("<div"):
+					outStr += "\n"
 					outStr += indestStr*indent
 					indent +=1
-				elif inStr.startswith("&lt;/div&gt;"):
+				elif inStr.startswith("</div>"):
 					indent -=1
-					outStr += "<br>"
+					outStr += "\n"
 					outStr += indestStr*indent
-				elif inStr.startswith("&lt;br"):
-					outStr += "<br>"
-					outStr += indestStr*indent
-				elif inStr.startswith("&lt;table"):
-					outStr += "<br>"
+				if inStr.startswith("<p"):
+					outStr += "\n"
 					outStr += indestStr*indent
 					indent +=1
-				elif inStr.startswith("&lt;/table"):
+				elif inStr.startswith("</p>"):
 					indent -=1
-					outStr += "<br>"
+					outStr += "\n"
 					outStr += indestStr*indent
-				elif inStr.startswith("&lt;tr"):
-					outStr += "<br>"
+				elif inStr.startswith("<br"):
+					outStr += "\n"
+					outStr += indestStr*indent
+				elif inStr.startswith("<table"):
+					outStr += "\n"
 					outStr += indestStr*indent
 					indent +=1
-				elif inStr.startswith("&lt;/tr"):
+				elif inStr.startswith("</table"):
 					indent -=1
-					outStr += "<br>"
+					outStr += "\n"
 					outStr += indestStr*indent
-				elif inStr.startswith("&lt;td"):
-					outStr += "<br>"
-					outStr += indestStr*indent
-				elif inStr.startswith("&lt;th&gt;"):
-					outStr += "<br>"
-					outStr += indestStr*indent
-				elif inStr.startswith("&lt;thead&gt;"):
-					outStr += "<br>"
+				elif inStr.startswith("<tr"):
+					outStr += "\n"
 					outStr += indestStr*indent
 					indent +=1
-				elif inStr.startswith("&lt;/thead&gt;"):
+				elif inStr.startswith("</tr"):
 					indent -=1
-					outStr += "<br>"
+					outStr += "\n"
 					outStr += indestStr*indent
-				elif inStr.startswith("&lt;tbody&gt;"):
-					outStr += "<br>"
+				elif inStr.startswith("<td"):
+					outStr += "\n"
+					outStr += indestStr*indent
+				elif inStr.startswith("<th>"):
+					outStr += "\n"
+					outStr += indestStr*indent
+				elif inStr.startswith("<thead"):
+					outStr += "\n"
 					outStr += indestStr*indent
 					indent +=1
-				elif inStr.startswith("&lt;/tbody&gt;"):
+				elif inStr.startswith("</thead>"):
 					indent -=1
-					outStr += "<br>"
+					outStr += "\n"
+					outStr += indestStr*indent
+				elif inStr.startswith("<tbody"):
+					outStr += "\n"
+					outStr += indestStr*indent
+					indent +=1
+				elif inStr.startswith("</tbody>"):
+					indent -=1
+					outStr += "\n"
 					outStr += indestStr*indent
 				outStr += inStr[0]
 				inStr = inStr[ 1: ]
-			self.editor.element.innerHTML = outStr
+	
+			self.editor.addClass("hide")
+			self.source.removeClass("hide");
+			self.source.element.value = outStr.strip();
 			self.actionbar.setActions( ["text.flipView"] )
 		else:
-			htmlStr = re.sub(r'<[^>]*?>', '', htmlStr)
-			htmlStr = htmlStr.replace("&nbsp;","").replace("&nbsp;","")
-			self.editor.element.innerHTML = htmlStr.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+			htmlStr = self.source.element.value
+			htmlStr = re.sub("\n", '', htmlStr)
+			htmlStr = re.sub("&nbsp;", '', htmlStr).strip()
+
+			eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML = '%s'" % htmlStr)
+			self.editor.removeClass("hide")
+			self.source.addClass("hide")
 			self.actionbar.setActions( self.textActions )
 
 		self.isWysiwygMode = not self.isWysiwygMode
@@ -1129,10 +1150,8 @@ class Wysiwyg( html5.Div ):
 
 
 	def saveText(self, *args, **kwargs):
-		self.saveTextEvent.fire(self, self.editor.element.innerHTML)
+		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
+		self.saveTextEvent.fire(self, htmlStr)
 
 	def abortText(self, *args, **kwargs):
 		self.abortTextEvent.fire(self)
-
-
-
