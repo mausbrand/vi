@@ -165,3 +165,12 @@ p a:visited {
 .vitxt-image-block {
 	width:100%;
 }
+
+// auto generate different indent sizes
+.generate-indent(20);
+.generate-indent(@n, @i: 1) when (@i =< @n) {
+  [data-indent="@{i}"] {
+    padding-left: @i * 1em;
+  }
+  .generate-indent(@n, (@i + 1));
+}

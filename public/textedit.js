@@ -251,30 +251,7 @@ var ListItemBlot = function (_Quill$import8) {
 
 Quill.register(ListItemBlot, true);
 
-// Indent
-
-var IndentBlot = function (_Quill$import9) {
-    _inherits(IndentBlot, _Quill$import9);
-
-    function IndentBlot() {
-        _classCallCheck(this, IndentBlot);
-
-        return _possibleConstructorReturn(this, (IndentBlot.__proto__ || Object.getPrototypeOf(IndentBlot)).apply(this, arguments));
-    }
-
-    _createClass(IndentBlot, null, [{
-        key: "create",
-        value: function create(value) {
-            var node = _get(IndentBlot.__proto__ || Object.getPrototypeOf(IndentBlot), "create", this).call(this, value);
-            node.setAttribute("class", "vitxt-indent");
-            return node;
-        }
-    }]);
-
-    return IndentBlot;
-}(Quill.import("blots/block"));
-
-IndentBlot.blotName = "indent";
-IndentBlot.tagName = "div";
-
-Quill.register(IndentBlot, true);
+var indentAttributor = new Parchment.Attributor.Attribute('indent', 'data-indent', {
+    scope: Parchment.Scope.BLOCK
+});
+Quill.register(indentAttributor);

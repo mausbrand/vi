@@ -149,18 +149,7 @@ class ListItemBlot extends Quill.import("formats/list/item")
 Quill.register(ListItemBlot, true);
 
 
-// Indent
-class IndentBlot extends Quill.import("blots/block")
-{
-    static create(value)
-    {
-        let node = super.create(value);
-        node.setAttribute("class", "vitxt-indent");
-        return node;
-    }
-}
-
-IndentBlot.blotName = "indent";
-IndentBlot.tagName = "div";
-
-Quill.register(IndentBlot, true);
+let indentAttributor = new Parchment.Attributor.Attribute('indent', 'data-indent', { 
+  scope: Parchment.Scope.BLOCK
+});
+Quill.register(indentAttributor);

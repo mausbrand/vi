@@ -60,7 +60,7 @@ class BasicEditorAction(html5.ext.Button):
 		self.removeClass("is-active")
 		if getattr(fmt, self.name, None):
 			value = getattr(fmt, self.name, None)
-			if value == "True" or self.value == value:
+			if value == "True" or self.value == value and self.name != "indent":
 				self.addClass("is-active")
 
 
@@ -183,12 +183,29 @@ class TextOutdent(BasicEditorAction):
 	value = "-1"
 	title = translate("Indent less")
 
+	def onClick(self, sender = None):
+		q = self.getQuill()
+		fmt = q.getFormat()
+		value = getattr(fmt, self.name, "0")
+		r = q.getSelection()
+
+	   	q.formatLine(r.index, r.length, "indent", int(value) - 1)
+
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.outdent", TextOutdent )
 
 class TextIndent(BasicEditorAction):
 	name = cmd = "indent"
 	value = "+1"
 	title = translate("Indent more")
+
+
+	def onClick(self, sender = None):
+		q = self.getQuill()
+		fmt = q.getFormat()
+		value = getattr(fmt, self.name, "0")
+		r = q.getSelection()
+
+	   	q.formatLine(r.index, r.length, "indent", int(value) + 1)
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.indent", TextIndent )
 
