@@ -20,13 +20,13 @@ class BasicEditorAction(html5.ext.Button):
 	def __init__(self, *args, **kwargs):
 		super(BasicEditorAction, self).__init__(self.cmd, *args, **kwargs)
 
-		self.addClass("icon", "text", "style", self.cmd) #, "ql-%s" % self.name)
+		self.removeClass("button") # dont use default button class here
+		self.addClass("btn-vTextedit", self.cmd) #, "ql-%s" % self.name)
 
 		if self.title:
 			self["title"] = self.title
-
-		#if self.value:
-		#	self["value"] = self.value
+		
+		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd + '.svg">')
 
 	def getQuill(self):
 		return self.parent().parent().editor.quill
@@ -665,8 +665,9 @@ actionDelegateSelector.insert(1, TableRemoveColAction.isSuitableFor, TableRemove
 class TextSaveAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
 		super( TextSaveAction, self ).__init__( translate("Save"), *args, **kwargs )
-		self["class"] = "icon text save"
+		self["class"] = "btn-vTextedit save f-right"
 		self["title"] = translate("Save")
+		self.setText('<img src="/vi/s/icons/actions/text/save.svg">')
 
 	def onClick(self, event):
 		self.parent().parent().saveText()
@@ -680,8 +681,9 @@ actionDelegateSelector.insert(1, TextSaveAction.isSuitableFor, TextSaveAction )
 class TextAbortAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
 		super( TextAbortAction, self ).__init__( translate("Abort"), *args, **kwargs )
-		self["class"] = "icon text abort"
+		self["class"] = "btn-vTextedit abort f-right"
 		self["title"] = translate("Abort")
+		self.setText('<img src="/vi/s/icons/actions/text/cancel.svg">')
 
 	def onClick(self, event):
 		if self.parent().parent().editor.changed():
@@ -896,8 +898,9 @@ actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=
 class FlipViewAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
 		super( FlipViewAction, self ).__init__( translate("Flip View"), *args, **kwargs )
-		self["class"] = "icon flipview"
+		self["class"] = "btn-vTextedit flipview"
 		self["title"] = translate("Flip View")
+		self.setText('<img src="/vi/s/icons/actions/text/code.svg">')
 
 	def onAttach(self):
 		super( FlipViewAction, self ).onAttach()
@@ -1000,29 +1003,29 @@ class Wysiwyg( html5.Div ):
 		self.cursorMovedEvent = EventDispatcher("cursorMoved")
 		self.saveTextEvent = EventDispatcher("saveText")
 		self.abortTextEvent = EventDispatcher("abortText")
-		self.textActions = ["style.text.bold",
-		                    "style.text.italic",
+		self.textActions = ["text.undo",
+							"text.redo",
+							"text.removeformat",
+							"text.flipView",
+							"style.text.bold",
+							"style.text.italic",
 							"style.text.super",
 							"style.text.sub"]+\
-		                   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
-		                   ["text.removeformat",
+						   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
+						   ["style.text.blockquote",
 							"style.text.justifyLeft",
 							"style.text.justifyCenter",
 							"style.text.justifyRight",
 							"style.text.justifyBlock",
-			                "style.text.blockquote",
-			                "text.orderedList",
-			                "text.unorderedList",
-			                "text.outdent",
-			                "text.indent",
-			                "text.image",
-			                "text.link",
-			                "text.table",
-			                "text.flipView",
-			                "text.undo",
-			                "text.redo",
-			                "text.abort",
-			                "text.save"]
+							"text.orderedList",
+							"text.unorderedList",
+							"text.outdent",
+							"text.indent",
+							"text.image",
+							"text.link",
+							"text.table",
+							"text.abort",
+							"text.save"]
 
 		#self["type"] = "text"
 		self.actionbar = ActionBar(None, None, actionBarHint)
