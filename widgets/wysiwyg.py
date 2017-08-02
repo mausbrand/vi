@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import html5, re
+import html5, re, json
 from widgets.actionbar import ActionBar
 from widgets.file import FileWidget
 
@@ -8,6 +8,8 @@ from priorityqueue import actionDelegateSelector
 from config import conf
 from i18n import translate
 from network import DeferredCall
+
+from __pyjamas__ import JS
 
 class BasicEditorAction(html5.ext.Button):
 	cmd = None
@@ -132,6 +134,12 @@ class TextStyleBlockQuote(BasicEditorAction):
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.blockquote", TextStyleBlockQuote )
 
+class TextInsertDivider(BasicEditorAction):
+	name = cmd = "divider"
+	title = translate("Divider")
+
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.divider", TextInsertDivider )
+
 class TextStyleJustifyCenter(BasicEditorAction):
 	cmd = "justifyCenter"
 	name = "align"
@@ -225,31 +233,100 @@ class TextRemoveFormat(BasicEditorAction):
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.removeformat", TextRemoveFormat )
 
+# --- Images -----------------------------------------------------------------------------------------------------------
 
-#FIXME:
+'''
+class FileSelectDialog(html5.ext.Popup):
+	def __init__(self, notifier=None, title="", alt="", additionalClass="", *args, **kwargs):
+		super(FileSelectDialog, self).__init__(*args, **kwargs)
+
+		currentSelector = FileWidget( "file", isSelector=True )
+		currentSelector.selectionActivatedEvent.register(self)
+
+		self.appendChild(currentSelector)
+
+		# Title
+		lbl = html5.Label()
+		lbl.appendChild(translate("Title"))
+		
+		self.titleInput = html5.Input()
+		self.titleInput["value"] = title
+		lbl.appendChild(self.titleInput)
+		self.appendChild(lbl)
+		
+		# Class
+		lbl = html5.Label()
+		lbl.appendChild(translate("Class"))
+
+		self.classSelect = html5.Select()
+		for c in ["vitxt-image-left", "vitxt-image-right", "vitxt-image-block"]:
+			opt = html5.Option()
+			opt["value"] = c
+			opt.appendChild(c)
+
+			if c == additionalClass:
+				opt["selected"] = True
+
+			self.classSelect.appendChild(opt)
+
+		lbl.appendChild(self.classSelect)
+		self.appendChild(lbl)
+
+		# Alt
+		lbl = html5.Label()
+		lbl.appendChild(translate("Alt"))
+		
+		self.altInput = html5.Input()
+		self.altInput["value"] = alt
+		lbl.appendChild(self.altInput)
+		self.appendChild(lbl)
+
+		# Buttons
+		btnOk = html5.ext.Button(translate("OK"), callback=self.onOkBtnClicked)
+		btnOk.addClass("btn_yes")
+		self.appendChild(btnOk)
+
+		btnCancel = html5.ext.Button(translate("Cancel"), callback=self.close)
+		btnCancel.addClass("btn_no")
+		self.appendChild(btnCancel)
+
+	def selectionActivatedEvent(self, selectWdg, selection)
+		self.select
+
+	def onOkBtnClicked(self, sender = None):
+		self.close()
+'''
+	
 class TextInsertImageAction(BasicEditorAction):
 	name = cmd = "image"
 	title = translate("Insert Image")
 
 	def onClick(self, sender=None):
-		currentSelector = FileWidget( "file", isSelector=True )
-		currentSelector.selectionActivatedEvent.register( self )
-		conf["mainWindow"].stackWidget( currentSelector )
+		#FileSelectDialog(successHandler=self.onFileSelectionAvailable)
 
-	def onSelectionActivated(self, selectWdg, selection):
-		print("onSelectionActivated")
+		self.currentSelector = FileWidget( "file", isSelector=True )
+		self.currentSelector.selectionActivatedEvent.register(self)
+		conf["mainWindow"].stackWidget(self.currentSelector)
 
-		if not selection:
-			return
+	def onSelectionActivated(self, widget, selection):
+			print("onSelectionActivated")
 
-		print(selection)
+			conf["mainWindow"].removeWidget(self.currentSelector)
 
-		for item in selection:
-			dataUrl = "/file/download/%s/%s" % (item.data["dlkey"], item.data["name"].replace("\"",""))
-			if "mimetype" in item.data.keys() and item.data["mimetype"].startswith("image/"):
-				self.execCommand("insertImage", dataUrl)
-			else:
-				self.execCommand("createLink", dataUrl + "?download=1")
+			if not selection:
+				return
+
+			print(selection)
+
+			for item in selection:
+				print(item)
+				dataUrl = "/file/download/%s/%s" % (item.data["dlkey"], item.data["name"].replace("\"",""))
+				if "mimetype" in item.data.keys() and item.data["mimetype"].startswith("image/"):	
+					data = json.dumps({"url": dataUrl, "alt": item.data["name"]})
+					self.getQuill().format("image", JS("JSON.parse(@{{data}})"))
+				else:
+					data = json.dumps({"href": dataUrl + "?download=1", "title": item.data["name"], "isDownload": "True"})
+					self.getQuill().format("link", JS("JSON.parse(@{{data}})"))
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
@@ -261,27 +338,94 @@ class TextInsertImageAction(BasicEditorAction):
 actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsertImageAction )
 
 
+# --- Links ------------------------------------------------------------------------------------------------------------
+
+class LinkEditDialog(html5.ext.Popup):
+	def __init__(self, href="", target="", title="", successHandler=None, *args, **kwargs):
+		super(LinkEditDialog, self).__init__(*args, **kwargs)
+
+		self.successHandler = successHandler
+
+		# URL
+		lbl = html5.Label()
+		lbl.appendChild(translate("URL"))
+		
+		self.urlInput = html5.Input()
+		self.urlInput["value"] = href
+		lbl.appendChild(self.urlInput)
+		self.appendChild(lbl)
+
+		# Target
+		lbl = html5.Label()
+		lbl.appendChild(translate("Target"))
+
+		self.targetSelect = html5.Select()
+		for t in ["", "_blank", "_self", "_parent", "_top"]:
+			opt = html5.Option()
+			opt["value"] = t
+			opt.appendChild(t)
+
+			if t == target:
+				opt["selected"] = True
+
+			self.targetSelect.appendChild(opt)
+
+		lbl.appendChild(self.targetSelect)
+		self.appendChild(lbl)
+
+		# Title
+		lbl = html5.Label()
+		lbl.appendChild(translate("Title"))
+		
+		self.titleInput = html5.Input()
+		self.titleInput["value"] = title
+		lbl.appendChild(self.titleInput)
+		self.appendChild(lbl)
+
+		# Buttons
+		btnOk = html5.ext.Button(translate("OK"), callback=self.onOkBtnClicked)
+		btnOk.addClass("btn_yes")
+		self.appendChild(btnOk)
+
+		btnCancel = html5.ext.Button(translate("Cancel"), callback=self.close)
+		btnCancel.addClass("btn_no")
+		self.appendChild(btnCancel)
+
+	def onOkBtnClicked(self, sender = None):
+		if self.successHandler:
+			url = self.urlInput["value"]
+			if url and not url.startswith('/file/') and not url.startswith('http'):
+				url = 'http://' + url
+
+			print ("myURL: %s" % url)
+			self.successHandler(
+				href=url, 
+				target=self.targetSelect.children(self.targetSelect["selectedIndex"])["value"],
+				title=self.titleInput["value"])
+			self.close()
+
 
 class TextInsertLinkAction(BasicEditorAction):
 	name = cmd = "link"
 	title = translate("Insert Link")
 
-	newLinkIdx = 0
-
 	def onClick(self, sender=None):
-		href = getattr(self.getQuill().getFormat(), self.name, "")
-		html5.ext.InputDialog("URL", successHandler=self.onLinkAvailable, value=href)
+		q = self.getQuill()
+		r = q.getSelection()
+		if r.length > 0:
+			data = getattr(self.getQuill().getFormat(), self.name, "")
+			data = json.loads(JS("JSON.stringify(@{{data}})"))
 
-	def onLinkAvailable(self, dialog, href):
-		self.getQuill().format("link", href)
+			LinkEditDialog(successHandler=self.onLinkAvailable, **data)
 
-	def createLink(self, dialog, value):
-		if value:
-			self.parent().parent().editor.focus()
+	def onLinkAvailable(self, **data):
+		data = json.dumps(data)
+		print ("myData: %s" % data)
+		self.getQuill().format("link", JS("JSON.parse(@{{data}})"))
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
-		return( actionName=="text.link" )
+		return actionName=="text.link"
 
 	def resetLoadingState(self):
 		pass
@@ -497,7 +641,6 @@ class TableInsertColBeforeAction( html5.ext.Button ):
 	def resetLoadingState(self):
 		pass
 
-
 actionDelegateSelector.insert(1, TableInsertColBeforeAction.isSuitableFor, TableInsertColBeforeAction )
 
 class TableInsertColAfterAction( html5.ext.Button ):
@@ -570,7 +713,6 @@ class TableInsertColAfterAction( html5.ext.Button ):
 
 actionDelegateSelector.insert(1, TableInsertColAfterAction.isSuitableFor, TableInsertColAfterAction )
 
-
 class TableRemoveRowAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
 		super( TableRemoveRowAction, self ).__init__( translate("Remove Table Row"), *args, **kwargs )
@@ -598,8 +740,6 @@ class TableRemoveRowAction( html5.ext.Button ):
 		pass
 
 actionDelegateSelector.insert(1, TableRemoveRowAction.isSuitableFor, TableRemoveRowAction )
-
-
 
 class TableRemoveColAction( html5.ext.Button ):
 	def __init__(self, *args, **kwargs):
@@ -703,178 +843,6 @@ class TextAbortAction( html5.ext.Button ):
 
 actionDelegateSelector.insert(1, TextAbortAction.isSuitableFor, TextAbortAction )
 
-class LinkEditor( html5.Div ):
-	newLinkIdx = 0
-	def __init__(self, *args, **kwargs):
-		super( LinkEditor, self ).__init__( *args, **kwargs )
-		self["class"].append("linkeditor")
-		self["style"]["display"] = "none"
-		self.linkTxt = html5.Input()
-		self.linkTxt["type"] = "text"
-		self.appendChild(self.linkTxt)
-		l = html5.Label(translate("URL"), forElem=self.linkTxt)
-		l["class"].append("urllbl")
-		self.appendChild( l )
-		self.newTab = html5.Input()
-		self.newTab["type"] = "checkbox"
-		self.appendChild(self.newTab)
-		l = html5.Label(translate("New window"), forElem=self.newTab)
-		l["class"].append("newwindowlbl")
-		self.appendChild( l )
-		self.caller = None
-
-	def getAFromTagStack(self, tagStack):
-		for elem in tagStack:
-			if not "tagName" in dir(elem):
-				continue
-			if elem.tagName=="A":
-				return( elem )
-		return( None )
-
-	def onCursorMoved(self, tagStack):
-		newElem = self.getAFromTagStack(tagStack)
-		if newElem is not None and self.currentElem is not None:
-			self.doClose()
-			self.doOpen( newElem )
-		elif self.currentElem is None and newElem is not None:
-			self.doOpen( newElem )
-		elif self.currentElem is not None and newElem is None:
-			self.doClose()
-
-	def doOpen(self, caller, href):
-		self.caller = caller
-		self.linkTxt["value"] = href
-		#self.newTab["checked"] = self.currentElem.target=="_blank"
-
-		self.isOpen = True
-		self["style"]["display"] = "block"
-
-	def doClose(self):
-		self.caller.onLinkAvailable(self.linkTxt["value"])
-
-		#if self.newTab["checked"]:
-		#	self.currentElem.target = "_blank"
-		#else:
-		#	self.currentElem.target = "_self"
-
-		self["style"]["display"] = "none"
-		self.caller = None
-
-	def findHref(self, linkTarget, elem):
-		if "tagName" in dir(elem):
-			if elem.tagName == "A":
-				if elem.href == linkTarget or elem.href.endswith(linkTarget):
-					return( elem )
-		if "children" in dir(elem):
-			for x in range(0,elem.children.length):
-				child = elem.children.item(x)
-				r = self.findHref( linkTarget, child)
-				if r is not None:
-					return( r )
-		return( None )
-
-	def openLink(self, caller, href = ""):
-		self.doOpen(caller, href)
-		self.linkTxt["value"] = ""
-		self.linkTxt.focus()
-
-
-class ImageEditor( html5.Div ):
-	def __init__(self, *args, **kwargs):
-		super( ImageEditor, self ).__init__( *args, **kwargs )
-		self["class"].append("imageeditor")
-		self["style"]["display"] = "none"
-		self.widthInput = html5.Input()
-		self.widthInput["type"] = "number"
-		self.appendChild(self.widthInput)
-		l = html5.Label(translate("Width"), self.widthInput)
-		l["class"].append("widthlbl")
-		self.appendChild( l )
-		self.keepAspectRatio = html5.Input()
-		self.keepAspectRatio["type"] = "checkbox"
-		self.appendChild( self.keepAspectRatio )
-		l = html5.Label(translate("Keep aspect ratio"), self.keepAspectRatio)
-		l["class"].append("aspectlbl")
-		self.appendChild( l )
-		self.heightInput = html5.Input()
-		self.heightInput["type"] = "number"
-		self.appendChild(self.heightInput)
-		l = html5.Label(translate("Height"), self.heightInput)
-		l["class"].append("heightlbl")
-		self.appendChild( l )
-		self.titleInput = html5.Input()
-		self.titleInput["type"] = "text"
-		self.appendChild(self.titleInput)
-		l = html5.Label(translate("Title"), self.titleInput)
-		l["class"].append("titlelbl")
-		self.appendChild( l )
-		self.currentElem = None
-		self.sinkEvent("onChange")
-
-	def onChange(self, event):
-		super(ImageEditor,self).onChange( event )
-		aspect = self.currentElem.naturalWidth/self.currentElem.naturalHeight
-		if event.target == self.widthInput.element:
-			if self.keepAspectRatio["checked"]:
-				self.heightInput["value"] = int(float(self.widthInput["value"])/aspect)
-		elif event.target == self.heightInput.element:
-			if self.keepAspectRatio["checked"]:
-				self.widthInput["value"] = int(float(self.heightInput["value"])*aspect)
-		self.currentElem.width = int(self.widthInput["value"])
-		self.currentElem.height = int(self.heightInput["value"])
-
-	def getImgFromTagStack(self, tagStack):
-		for elem in tagStack:
-			if not "tagName" in dir(elem):
-				continue
-			if elem.tagName=="IMG":
-				return( elem )
-		return( None )
-
-	def onCursorMoved(self, tagStack):
-		newElem = self.getImgFromTagStack(tagStack)
-		if newElem is not None and self.currentElem is not None:
-			self.doClose()
-			self.doOpen( newElem )
-		elif self.currentElem is None and newElem is not None:
-			self.doOpen( newElem )
-		elif self.currentElem is not None and newElem is None:
-			self.doClose()
-
-	def doOpen(self, elem):
-		self.currentElem = elem
-		self["style"]["display"] = ""
-		self.heightInput["value"] = elem.height
-		self.widthInput["value"] = elem.width
-		self.titleInput["value"] = elem.title
-
-	def doClose(self):
-		if self.currentElem is None:
-			return
-		self.currentElem.width = int( self.widthInput["value"] )
-		self.currentElem.height = int( self.heightInput["value"] )
-		self.currentElem.title = self.titleInput["value"]
-		self["style"]["display"] = "none"
-		self.currentElem = None
-
-	def findImg(self, linkTarget, elem):
-		if "tagName" in dir(elem):
-			if elem.tagName == "IMG":
-				if elem.href == linkTarget or elem.href.endswith(linkTarget):
-					return( elem )
-		if "children" in dir(elem):
-			for x in range(0,elem.children.length):
-				child = elem.children.item(x)
-				r = self.findImg( linkTarget, child)
-				if r is not None:
-					return( r )
-		return( None )
-
-	def openLink(self, linkTarget):
-		self.doOpen( self.findHref( linkTarget, self.parent().editor.element ) )
-		self.linkTxt["value"] = ""
-		self.linkTxt.focus()
-
 
 class TextUndoAction(BasicEditorAction):
 	cmd = "undo"
@@ -893,8 +861,6 @@ class TextRedoAction( BasicEditorAction ):
 		self.parent().parent().editor.quill.history.redo()
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.redo", TextRedoAction )
-
-
 
 
 class FlipViewAction( html5.ext.Button ):
@@ -925,8 +891,6 @@ class FlipViewAction( html5.ext.Button ):
 	def resetLoadingState(self):
 		pass
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.flipView", FlipViewAction )
-
-
 
 
 def dumpNode(obj):
@@ -1023,6 +987,7 @@ class Wysiwyg( html5.Div ):
 							"text.unorderedList",
 							"text.outdent",
 							"text.indent",
+							"text.divider",
 							"text.image",
 							"text.link",
 							"text.table",
@@ -1040,10 +1005,6 @@ class Wysiwyg( html5.Div ):
 		for c in [TableInsertRowBeforeAction,TableInsertRowAfterAction,TableInsertColBeforeAction,TableInsertColAfterAction,TableRemoveRowAction,TableRemoveColAction]:
 			self.tableDiv.appendChild( c() )
 		self.tableDiv["style"]["display"]="none"
-		self.linkEditor = LinkEditor()
-		self.appendChild(self.linkEditor)
-		self.imgEditor = ImageEditor()
-		self.appendChild(self.imgEditor)
 
 		self.editor = Editor(self, editHtml)
 
@@ -1065,10 +1026,6 @@ class Wysiwyg( html5.Div ):
 		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
 
 		if self.isWysiwygMode:
-		#	FIXME: doesnt work with new texteditor so far
-		#	self.imgEditor.doClose()
-		#	self.linkEditor.doClose()
-		#	self.tableDiv["style"]["display"] = None
 			outStr = ""
 			indent = 0
 			indestStr = "    "

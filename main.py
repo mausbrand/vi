@@ -5,8 +5,6 @@ from admin import AdminScreen
 from config import conf
 from i18n import translate
 
-from widgets.wysiwyg import Wysiwyg
-
 try:
 	import vi_plugins
 except ImportError:
@@ -17,9 +15,6 @@ class Application(html5.Div):
 		super(Application, self).__init__()
 		self["class"].append("vi-application")
 		conf["theApp"] = self
-
-		self.appendChild(Wysiwyg(""))
-		return
 
 		# Main Screens
 		self.loginScreen = None
