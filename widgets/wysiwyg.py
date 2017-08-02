@@ -25,8 +25,10 @@ class BasicEditorAction(html5.ext.Button):
 
 		if self.title:
 			self["title"] = self.title
+		else:
+			self["title"] = self.cmd
 		
-		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd + '.svg">')
+		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd + '.svg" alt="' + self["title"] + '">')
 
 	def getQuill(self):
 		return self.parent().parent().editor.quill
@@ -68,7 +70,7 @@ class TextStyleBold(BasicEditorAction):
 	name = cmd = "bold"
 	title = translate("Bold")
 
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.bold", TextStyleBold)
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.bold", TextStyleBold )
 
 class TextStyleItalic(BasicEditorAction):
 	name = cmd = "italic"
@@ -262,6 +264,7 @@ actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsert
 
 class TextInsertLinkAction(BasicEditorAction):
 	name = cmd = "link"
+	title = translate("Insert Link")
 
 	newLinkIdx = 0
 
