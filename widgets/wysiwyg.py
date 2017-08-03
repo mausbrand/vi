@@ -33,7 +33,7 @@ class BasicEditorAction(html5.ext.Button):
 		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd + '.svg" alt="' + self["title"] + '">')
 
 	def getQuill(self):
-		return self.parent().parent().editor.quill
+		return self.parent().parent().parent().editor.quill
 
 	def onClick(self, sender = None):
 		q = self.getQuill()
@@ -50,22 +50,88 @@ class BasicEditorAction(html5.ext.Button):
 		q.format(self.name, value)
 
 	def onAttach(self):
-		self.parent().parent().editor.editorChangeEvent.register(self)
+		self.parent().parent().parent().editor.editorChangeEvent.register(self)
 
 	def onDetach(self):
-		self.parent().parent().editor.editorChangeEvent.unregister(self)
+		self.parent().parent().parent().editor.editorChangeEvent.unregister(self)
 
 	def onEditorChange(self):
+		q = self.getQuill()
+		JS("parent.myQuill = @{{q}}")
+	
 		try:
-			fmt = self.getQuill().getFormat()
+			fmt = q.getFormat()
 		except:
 			return
 		
 		self.removeClass("is-active")
 		if getattr(fmt, self.name, None):
 			value = getattr(fmt, self.name, None)
+			print(value, self.name, self.value)
 			if value == "True" or self.value == value and self.name != "indent":
 				self.addClass("is-active")
+			if self.name == "link" and self.value:
+				print("value1", value, value.href)
+				LinkEditor(value=value, quill=self.getQuill)
+				
+
+class LinkEditor(html5.ext.Popup):
+	def __init__(self, value=None, quill=None, *args, **kwargs):
+		super( LinkEditor, self ).__init__(*args, **kwargs)
+		
+		self.quill = quill
+		self.value = value
+		self.addClass("linkDialog")
+
+		# hint
+		hint = html5.Span()
+		hint.appendChild(translate("edit link") + value.href)
+		self.appendChild(hint)
+		
+		# Buttons
+		btnOk = html5.ext.Button(translate("OK"), callback=self.onOkBtnClicked)
+		btnOk.addClass("btn_yes")
+		self.appendChild(btnOk)
+
+		btnCancel = html5.ext.Button(translate("Cancel"), callback=self.close)
+		btnCancel.addClass("btn_no")
+		self.appendChild(btnCancel)
+
+	def onOkBtnClicked(self, sender = None):
+		q = self.quill()
+
+		jsonSel = json.dumps(q.getFormat())
+		index = q.getSelection().index
+		start = index
+		length = 0
+
+		while json.dumps(q.getFormat(start)) == jsonSel:
+			start = start - 1
+		start = start + 1
+
+		while json.dumps(q.getFormat(start, length)) == jsonSel:
+			length = length + 1
+		length = length - 2
+
+		print("selection is (%s, %s)" % (start, length))
+		q.setSelection(start, length)
+
+
+		value = self.value
+		data = json.loads(JS("JSON.stringify(@{{value}})"))
+
+		LinkEditDialog(successHandler=self.onLinkAvailable, **data)
+		self.close()
+
+	def onLinkAvailable(self, **data):
+		q = JS("parent.myQuill")
+		data = json.dumps(data)
+		print ("myData: %s" % data)
+		q.format("link", JS("JSON.parse(@{{data}})"))
+		q.setSelection(0)
+
+
+
 
 
 class TextStyleBold(BasicEditorAction):
@@ -423,6 +489,16 @@ class TextInsertLinkAction(BasicEditorAction):
 		data = json.dumps(data)
 		print ("myData: %s" % data)
 		self.getQuill().format("link", JS("JSON.parse(@{{data}})"))
+
+	def editLink(self, index=None, length=None, value=None, quill=None):
+		#super( TextInsertLinkAction, self ).__init__( *args, **kwargs )
+		q = quill
+		if length > 0:
+			print("value4", value, value.href)
+			data = json.loads(JS("JSON.stringify(@{{value}})"))
+
+			LinkEditDialog(successHandler=self.onLinkAvailable, **data)
+
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
@@ -813,7 +889,7 @@ class TextSaveAction( html5.ext.Button ):
 		self.setText('<img src="/vi/s/icons/actions/text/save.svg">')
 
 	def onClick(self, event):
-		self.parent().parent().saveText()
+		self.parent().parent().parent().saveText()
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
@@ -829,14 +905,14 @@ class TextAbortAction( html5.ext.Button ):
 		self.setText('<img src="/vi/s/icons/actions/text/cancel.svg">')
 
 	def onClick(self, event):
-		if self.parent().parent().editor.changed():
+		if self.parent().parent().parent().editor.changed():
 			html5.ext.popup.YesNoDialog(translate("Any changes will be lost. Do you really want to abort?"),
 			                            yesCallback=self.doAbort)
 		else:
 			self.doAbort()
 
 	def doAbort(self, *args, **kwargs):
-		self.parent().parent().abortText()
+		self.parent().parent().parent().abortText()
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
@@ -850,7 +926,7 @@ class TextUndoAction(BasicEditorAction):
 	title = translate("Undo the last action")
 
 	def onClick(self, sender = None):
-		self.parent().parent().editor.quill.history.undo()
+		self.getQuill().history.undo()
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.undo", TextUndoAction )
 
@@ -859,7 +935,7 @@ class TextRedoAction( BasicEditorAction ):
 	title = translate("Redo the last undone action")
 
 	def onClick(self, sender=None):
-		self.parent().parent().editor.quill.history.redo()
+		self.getQuill().history.redo()
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.redo", TextRedoAction )
 
@@ -873,7 +949,7 @@ class FlipViewAction( html5.ext.Button ):
 
 	def onAttach(self):
 		super( FlipViewAction, self ).onAttach()
-		if self.parent().parent().isWysiwygMode:
+		if self.parent().parent().parent().isWysiwygMode:
 			self["class"].append("is_wysiwyg")
 		else:
 			self["class"].append("is_htmlview")
@@ -884,7 +960,7 @@ class FlipViewAction( html5.ext.Button ):
 		if "is_htmlview" in self["class"]:
 			self["class"].remove("is_htmlview")
 
-		if self.parent().parent().flipView():
+		if self.parent().parent().parent().flipView():
 			self["class"].append("is_wysiwyg")
 		else:
 			self["class"].append("is_htmlview")
@@ -929,15 +1005,8 @@ class Editor(html5.Div):
 
 	def init(self):
 		self.quill = eval("""
-					new window.top.quill("#%s",
-						{
-
-							modules:
-							{
-								toolbar: "#%s",
-							}
-						})
-					""" % (self["id"], self.parent().actionbar["id"]))
+					new window.top.quill("#%s",{}) // quill works without toolbar as well
+					""" % (self["id"]))
 
 		self.quill.on("editor-change", self.updateActionBar)
 
@@ -970,46 +1039,57 @@ class Wysiwyg( html5.Div ):
 		self.cursorMovedEvent = EventDispatcher("cursorMoved")
 		self.saveTextEvent = EventDispatcher("saveText")
 		self.abortTextEvent = EventDispatcher("abortText")
-		self.textActions = ["text.undo",
+		self.textActions1 = ["text.undo",
 							"text.redo",
 							"text.removeformat",
 							"text.flipView",
-							"style.text.bold",
-							"style.text.italic",
-							"style.text.super",
-							"style.text.sub"]+\
-						   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
-						   ["style.text.blockquote",
 							"style.text.alignLeft",
 							"style.text.alignCenter",
 							"style.text.alignRight",
 							"style.text.alignJustify",
-							"text.orderedList",
-							"text.unorderedList",
-							"text.outdent",
-							"text.indent",
 							"text.divider",
 							"text.image",
 							"text.link",
 							"text.table",
 							"text.abort",
 							"text.save"]
+		self.textActions2 = [
+							"style.text.bold",
+							"style.text.italic",
+							"style.text.super",
+							"style.text.sub"]+\
+						   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
+						   ["style.text.blockquote",
+							"text.orderedList",
+							"text.unorderedList",
+							"text.outdent",
+							"text.indent"]
 
-		#self["type"] = "text"
-		self.actionbar = ActionBar(None, None, actionBarHint)
+		self.actionbar1 = ActionBar(None, None, actionBarHint)
+		self.actionbar1.removeClass("actionbar")
+		self.actionbar1.addClass("actionbar1")
+		self.actionbar1.setActions( self.textActions1 )
+
+		self.actionbar2 = ActionBar(None, None, None)
+		self.actionbar2.removeClass("actionbar")
+		self.actionbar2.addClass("actionbar2")
+		self.actionbar2.setActions( self.textActions2 )
+		
+		self.actionbarWrap = html5.Div()
+		self.actionbarWrap.addClass("actionbar")
+		self.actionbarWrap.appendChild( self.actionbar1 )
+		self.actionbarWrap.appendChild( self.actionbar2 )
+		self.appendChild( self.actionbarWrap );
+		
+		self.source = html5.form.Textarea()
+		self.source["class"].append("sourceCode")
+		self.source["class"].append("hide")
+		self.appendChild(self.source)
+		
 		self.isWysiwygMode = True
 		self.discardNextClickEvent = False
-		self.appendChild( self.actionbar )
-		self.tableDiv = html5.Div()
-		self.tableDiv["class"].append("tableeditor")
-		self.appendChild(self.tableDiv)
-		for c in [TableInsertRowBeforeAction,TableInsertRowAfterAction,TableInsertColBeforeAction,TableInsertColAfterAction,TableRemoveRowAction,TableRemoveColAction]:
-			self.tableDiv.appendChild( c() )
-		self.tableDiv["style"]["display"]="none"
-
 		self.editor = Editor(self, editHtml)
 
-		self.actionbar.setActions( self.textActions )
 		#btn = html5.ext.Button("Apply", self.saveText)
 		#btn["class"].append("icon apply")
 		#self.appendChild( btn )
@@ -1018,10 +1098,15 @@ class Wysiwyg( html5.Div ):
 		self.lastMousePos = None
 		self.sinkEvent("onMouseDown", "onMouseUp", "onMouseMove", "onClick")
 
-		self.source = html5.form.Textarea()
-		self.source["class"].append("sourceCode")
-		self.source["class"].append("hide")
-		self.appendChild(self.source)
+		
+		"""
+		self.tableDiv = html5.Div()
+		self.tableDiv["class"].append("tableeditor")
+		self.appendChild(self.tableDiv)
+		for c in [TableInsertRowBeforeAction,TableInsertRowAfterAction,TableInsertColBeforeAction,TableInsertColAfterAction,TableRemoveRowAction,TableRemoveColAction]:
+			self.tableDiv.appendChild( c() )
+		self.tableDiv["style"]["display"]="none"
+		"""
 
 	def flipView(self, *args, **kwargs ):
 		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
@@ -1095,7 +1180,8 @@ class Wysiwyg( html5.Div ):
 			self.editor.addClass("hide")
 			self.source.removeClass("hide");
 			self.source.element.value = outStr.strip();
-			self.actionbar.setActions( ["text.flipView"] )
+			self.actionbar1.setActions( ["text.flipView"] )
+			self.actionbar2.setActions( [] )
 		else:
 			htmlStr = self.source.element.value
 			htmlStr = re.sub("\n", '', htmlStr)
@@ -1104,7 +1190,8 @@ class Wysiwyg( html5.Div ):
 			eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML = '%s'" % htmlStr)
 			self.editor.removeClass("hide")
 			self.source.addClass("hide")
-			self.actionbar.setActions( self.textActions )
+			self.actionbar1.setActions( self.textActions1 )
+			self.actionbar2.setActions( self.textActions2 )
 
 		self.isWysiwygMode = not self.isWysiwygMode
 		return self.isWysiwygMode
