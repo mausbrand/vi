@@ -1,9 +1,16 @@
 @charset "UTF-8";
 
-.ql-editor {
-  display: block;
+.ql-editor,
+.sourceCode {
+  width: 97.2%;
   height: auto;
   min-height: 300px;
+  overflow: hidden;
+  overflow-y: scroll;
+  margin: 0 0 250px;
+  padding-top: 25px;
+  display: block;
+  font-family: inherit;
 }
 
 .ql-clipboard {
@@ -219,9 +226,9 @@ button[type="button"].btn-vTextedit {
   }
   &.Sub,
   &.flipview,
-  &.justifyBlock,
+  &.alignJustify,
   &.blockquote,
-  &.insertUnorderedList,
+  &.unorderedList,
   &.link,
   &.indent,
   &.abort {
@@ -242,10 +249,25 @@ button[type="button"].btn-vTextedit {
   display: none;
 }
 
-.sourceCode {
-  width: 50%;
-  height: auto;
-  min-height: 300px;
-  resize: none;
-  font-family: inherit;
+
+.linkDialog {
+  label {
+    padding-left: 0px;
+    margin-bottom: 10px;
+    font-size: .8rem;
+    height: 28px;
+    vertical-align: middle;
+    padding-top: 3px;
+    position: relative;
+  }
+  input, select {
+    position: absolute;
+    width: auto;
+    top: 0;
+    left: 60px;
+    width: calc(~" 100% - 2.6% - 60px");
+    box-sizing: border-box;
+    padding: 4px 1.3% 6px;
+    height: 28px;
+  }
 }

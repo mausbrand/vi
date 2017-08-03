@@ -140,40 +140,40 @@ class TextInsertDivider(BasicEditorAction):
 
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.divider", TextInsertDivider )
 
-class TextStyleJustifyCenter(BasicEditorAction):
-	cmd = "justifyCenter"
+class TextStyleAlignCenter(BasicEditorAction):
+	cmd = "alignCenter"
 	name = "align"
 	value = "Center"
-	title = translate("Justifiy Center")
+	title = translate("Align Center")
 
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyCenter", TextStyleJustifyCenter )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.alignCenter", TextStyleAlignCenter )
 
-class TextStyleJustifyLeft(BasicEditorAction):
-	cmd = "justifyLeft"
+class TextStyleAlignLeft(BasicEditorAction):
+	cmd = "alignLeft"
 	name = "align"
 	value = "Left"
-	title = translate("Justifiy Left")
+	title = translate("Align Left")
 
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyLeft", TextStyleJustifyLeft )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.alignLeft", TextStyleAlignLeft )
 
-class TextStyleJustifyRight(BasicEditorAction):
-	cmd = "justifyRight"
+class TextStyleAlignRight(BasicEditorAction):
+	cmd = "alignRight"
 	name = "align"
 	value = "Right"
-	title = translate("Justifiy Right")
+	title = translate("Align Right")
 
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyRight", TextStyleJustifyRight )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.alignRight", TextStyleAlignRight )
 
-class TextStyleJustifyRight(BasicEditorAction):
-	cmd = "justifyBlock"
+class TextStyleAlignJustify(BasicEditorAction):
+	cmd = "alignJustify"
 	name = "align"
 	value = "Justify"
-	title = translate("Justifiy Full")
+	title = translate("Align Justify")
 
-actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.justifyBlock", TextStyleJustifyRight )
+actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="style.text.alignJustify", TextStyleAlignJustify )
 
 class TextInsertOrderedList(BasicEditorAction):
-	cmd = "insertOrderedList"
+	cmd = "orderedList"
 	name = "list"
 	value = "ordered"
 	title = translate("Insert an ordered List")
@@ -181,7 +181,7 @@ class TextInsertOrderedList(BasicEditorAction):
 actionDelegateSelector.insert(1, lambda module, handler, actionName: actionName=="text.orderedList", TextInsertOrderedList )
 
 class TextInsertUnorderedList(BasicEditorAction):
-	cmd = "insertUnorderedList"
+	cmd = "unorderedList"
 	name = "list"
 	value = "bullet"
 	title = translate("Insert an unordered List")
@@ -345,6 +345,7 @@ class LinkEditDialog(html5.ext.Popup):
 		super(LinkEditDialog, self).__init__(*args, **kwargs)
 
 		self.successHandler = successHandler
+		self.addClass("linkDialog")
 
 		# URL
 		lbl = html5.Label()
@@ -979,10 +980,10 @@ class Wysiwyg( html5.Div ):
 							"style.text.sub"]+\
 						   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
 						   ["style.text.blockquote",
-							"style.text.justifyLeft",
-							"style.text.justifyCenter",
-							"style.text.justifyRight",
-							"style.text.justifyBlock",
+							"style.text.alignLeft",
+							"style.text.alignCenter",
+							"style.text.alignRight",
+							"style.text.alignJustify",
 							"text.orderedList",
 							"text.unorderedList",
 							"text.outdent",
