@@ -46,7 +46,7 @@ class BasicEditorAction(html5.ext.Button):
 		else:
 			value = self.value
 
-		print(self.name, value)
+		print("clicked on button %s[%s]" % (self.name, value))
 		q.format(self.name, value)
 
 	def onAttach(self):
@@ -57,7 +57,6 @@ class BasicEditorAction(html5.ext.Button):
 
 	def onEditorChange(self):
 		q = self.getQuill()
-		JS("parent.myQuill = @{{q}}")
 	
 		try:
 			fmt = q.getFormat()
@@ -67,70 +66,8 @@ class BasicEditorAction(html5.ext.Button):
 		self.removeClass("is-active")
 		if getattr(fmt, self.name, None):
 			value = getattr(fmt, self.name, None)
-			print(value, self.name, self.value)
 			if value == "True" or self.value == value and self.name != "indent":
 				self.addClass("is-active")
-			if self.name == "link" and self.value:
-				print("value1", value, value.href)
-				LinkEditor(value=value, quill=self.getQuill)
-				
-
-class LinkEditor(html5.ext.Popup):
-	def __init__(self, value=None, quill=None, *args, **kwargs):
-		super( LinkEditor, self ).__init__(*args, **kwargs)
-		
-		self.quill = quill
-		self.value = value
-		self.addClass("linkDialog")
-
-		# hint
-		hint = html5.Span()
-		hint.appendChild(translate("edit link") + value.href)
-		self.appendChild(hint)
-		
-		# Buttons
-		btnOk = html5.ext.Button(translate("OK"), callback=self.onOkBtnClicked)
-		btnOk.addClass("btn_yes")
-		self.appendChild(btnOk)
-
-		btnCancel = html5.ext.Button(translate("Cancel"), callback=self.close)
-		btnCancel.addClass("btn_no")
-		self.appendChild(btnCancel)
-
-	def onOkBtnClicked(self, sender = None):
-		q = self.quill()
-
-		jsonSel = json.dumps(q.getFormat())
-		index = q.getSelection().index
-		start = index
-		length = 0
-
-		while json.dumps(q.getFormat(start)) == jsonSel:
-			start = start - 1
-		start = start + 1
-
-		while json.dumps(q.getFormat(start, length)) == jsonSel:
-			length = length + 1
-		length = length - 2
-
-		print("selection is (%s, %s)" % (start, length))
-		q.setSelection(start, length)
-
-
-		value = self.value
-		data = json.loads(JS("JSON.stringify(@{{value}})"))
-
-		LinkEditDialog(successHandler=self.onLinkAvailable, **data)
-		self.close()
-
-	def onLinkAvailable(self, **data):
-		q = JS("parent.myQuill")
-		data = json.dumps(data)
-		print ("myData: %s" % data)
-		q.format("link", JS("JSON.parse(@{{data}})"))
-		q.setSelection(0)
-
-
 
 
 
@@ -375,17 +312,12 @@ class TextInsertImageAction(BasicEditorAction):
 		conf["mainWindow"].stackWidget(self.currentSelector)
 
 	def onSelectionActivated(self, widget, selection):
-			print("onSelectionActivated")
-
 			conf["mainWindow"].removeWidget(self.currentSelector)
 
 			if not selection:
 				return
 
-			print(selection)
-
 			for item in selection:
-				print(item)
 				dataUrl = "/file/download/%s/%s" % (item.data["dlkey"], item.data["name"].replace("\"",""))
 				if "mimetype" in item.data.keys() and item.data["mimetype"].startswith("image/"):	
 					data = json.dumps({"url": dataUrl, "alt": item.data["name"]})
@@ -407,10 +339,11 @@ actionDelegateSelector.insert(1, TextInsertImageAction.isSuitableFor, TextInsert
 # --- Links ------------------------------------------------------------------------------------------------------------
 
 class LinkEditDialog(html5.ext.Popup):
-	def __init__(self, href="", target="", title="", successHandler=None, *args, **kwargs):
+	def __init__(self, href="", target="", title="", successHandler=None, quill=None, *args, **kwargs):
 		super(LinkEditDialog, self).__init__(*args, **kwargs)
 
 		self.successHandler = successHandler
+		self.quill = quill
 		self.addClass("linkDialog")
 
 		# URL
@@ -464,7 +397,6 @@ class LinkEditDialog(html5.ext.Popup):
 			if url and not url.startswith('/file/') and not url.startswith('http'):
 				url = 'http://' + url
 
-			print ("myURL: %s" % url)
 			self.successHandler(
 				href=url, 
 				target=self.targetSelect.children(self.targetSelect["selectedIndex"])["value"],
@@ -487,18 +419,7 @@ class TextInsertLinkAction(BasicEditorAction):
 
 	def onLinkAvailable(self, **data):
 		data = json.dumps(data)
-		print ("myData: %s" % data)
 		self.getQuill().format("link", JS("JSON.parse(@{{data}})"))
-
-	def editLink(self, index=None, length=None, value=None, quill=None):
-		#super( TextInsertLinkAction, self ).__init__( *args, **kwargs )
-		q = quill
-		if length > 0:
-			print("value4", value, value.href)
-			data = json.loads(JS("JSON.stringify(@{{value}})"))
-
-			LinkEditDialog(successHandler=self.onLinkAvailable, **data)
-
 
 	@staticmethod
 	def isSuitableFor( module, handler, actionName ):
@@ -506,6 +427,38 @@ class TextInsertLinkAction(BasicEditorAction):
 
 	def resetLoadingState(self):
 		pass
+
+class LinkEditor(html5.ext.Popup):
+	def __init__(self, value=None, quill=None, left=500, top=200, *args, **kwargs):
+		super( LinkEditor, self ).__init__(*args, **kwargs)
+
+		self.value = value
+		self.addClass("linkEditor")
+		self.parent().removeClass("popup")
+		self.element.setAttribute("style", "left:" + str(left) + "px;top:" + str(top) + "px;")
+
+		# hint
+		hint = html5.Span()
+		hint.appendChild(value.href)
+		self.appendChild(hint)
+		
+		# Buttons
+		btnEdit = html5.ext.Button(translate("edit"), callback=self.onEditBtnClicked)
+		btnEdit.addClass("icon edit")
+		hint.appendChild(btnEdit)
+
+	def onEditBtnClicked(self, sender = None):
+		value = self.value
+		data = json.loads(JS("JSON.stringify(@{{value}})"))
+
+		LinkEditDialog(successHandler=self.onLinkAvailable, **data)
+		self.close()
+
+	def onLinkAvailable(self, **data):
+		q = JS("parent.myQuill")
+		data = json.dumps(data)
+		q.format("link", JS("JSON.parse(@{{data}})"))
+		eval("parent.lastSelection.index = parent.lastSelection.length = 0;")
 
 actionDelegateSelector.insert(1, TextInsertLinkAction.isSuitableFor, TextInsertLinkAction )
 
@@ -1007,17 +960,66 @@ class Editor(html5.Div):
 		self.quill = eval("""
 					new window.top.quill("#%s",{}) // quill works without toolbar as well
 					""" % (self["id"]))
+		q = self.quill
+		eval("parent.lastSelection = {}; parent.lastSelection.index = parent.lastSelection.length = 0;")
+		JS("parent.myQuill = @{{q}}")
 
 		self.quill.on("editor-change", self.updateActionBar)
+		self.quill.on("selection-change", self.updateSelection)
 
 	def changed(self):
 		return self.initial_txt != self.element.innerHTML
 
 	def updateActionBar(self, *args, **kwargs):
-		print("CHANGE!")
-		print(args)
-		print(kwargs)
 		self.editorChangeEvent.fire()
+
+	def updateSelection(self, *args, **kwargs):
+		if args[2] == "user":
+			JS("""
+				if(parent.document.getElementsByClassName('linkEditor')) {
+					if(parent.document.getElementsByClassName('linkEditor')[0]) {
+						if(parent.document.getElementsByClassName('linkEditor')[0].parentNode) {
+							if(parent.document.getElementsByClassName('linkEditor')[0].parentNode.parentNode) {
+								parent.document.getElementsByClassName('linkEditor')[0].parentNode.parentNode.removeChild(parent.document.getElementsByClassName('linkEditor')[0].parentNode)
+							}
+						}
+					}
+				}
+			""")
+			try:
+				fmt = self.quill.getFormat()
+			except:
+				return
+
+			
+			if getattr(fmt, "link", None):
+				value = getattr(fmt, "link", None)
+				lastSelection =(JS("parent.lastSelection"))
+
+				jsonSel = json.dumps(self.quill.getFormat())
+				index = self.quill.getSelection().index
+				start = index
+				length = 0
+
+				while json.dumps(self.quill.getFormat(start)) == jsonSel:
+					start = start - 1
+				start = start + 1
+
+				while json.dumps(self.quill.getFormat(start, length)) == jsonSel:
+					length = length + 1
+				length = length - 2
+
+				if lastSelection.index == start and lastSelection.length == length:
+					return
+				
+				self.quill.setSelection(start, length)
+
+				top = self.quill.getBounds(start, length).top + self.quill.getBounds(start, length).height + eval("parent.document.getElementById('%s').getBoundingClientRect().top" % self["id"])
+				left = self.quill.getBounds(start, length).left + eval("parent.document.getElementById('%s').getBoundingClientRect().left" % self["id"])
+
+				LinkEditor(value=value, quill=self.quill, left=left, top=top)
+
+			eval("parent.lastSelection.index = '%s'; parent.lastSelection.length = '%s';" % (self.quill.getSelection().index, self.quill.getSelection().length))
 
 	def execCommand(self, commandName, valueArgument=None):
 		"""
