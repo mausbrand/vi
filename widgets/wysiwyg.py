@@ -997,17 +997,14 @@ class Editor(html5.Div):
 				lastSelection =(JS("parent.lastSelection"))
 
 				jsonSel = json.dumps(self.quill.getFormat())
-				index = self.quill.getSelection().index
-				start = index
+				start = self.quill.getSelection().index - 1
 				length = 0
 
 				while json.dumps(self.quill.getFormat(start)) == jsonSel:
 					start = start - 1
-				start = start + 1
 
-				while json.dumps(self.quill.getFormat(start, length)) == jsonSel:
+				while json.dumps(self.quill.getFormat(start + 1, length)) == jsonSel:
 					length = length + 1
-				length = length - 2
 
 				if lastSelection.index == start and lastSelection.length == length:
 					return
