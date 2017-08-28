@@ -267,25 +267,7 @@ var LinkBlot = function (_Quill$import9) {
 		return _possibleConstructorReturn(this, (LinkBlot.__proto__ || Object.getPrototypeOf(LinkBlot)).apply(this, arguments));
 	}
 
-	_createClass(LinkBlot, [{
-		key: "format",
-		value: function format(name, value) {
-			_get(LinkBlot.prototype.__proto__ || Object.getPrototypeOf(LinkBlot.prototype), "format", this).call(this, name, value.href); // use value.href here because the super class doesnt support objects
-
-			this.domNode.setAttribute('href', value.href);
-			if (value.target) {
-				this.domNode.setAttribute('target', value.target);
-			} else {
-				this.domNode.removeAttribute('target');
-			}
-
-			if (value.title) {
-				this.domNode.setAttribute('title', value.title);
-			} else {
-				this.domNode.removeAttribute('title');
-			}
-		}
-	}], [{
+	_createClass(LinkBlot, null, [{
 		key: "create",
 		value: function create(value) {
 			console.log(value);
@@ -311,6 +293,26 @@ var LinkBlot = function (_Quill$import9) {
 				node.setAttribute('class', "vitxt-link");
 			}
 			return node;
+		}
+	}, {
+		key: "format",
+		value: function format(name, value) {
+			if (!value) return;
+
+			_get(LinkBlot.__proto__ || Object.getPrototypeOf(LinkBlot), "format", this).call(this, name, value.href); // use value.href here because the super class doesnt support objects
+
+			this.domNode.setAttribute('href', value.href);
+			if (value.target) {
+				this.domNode.setAttribute('target', value.target);
+			} else {
+				this.domNode.removeAttribute('target');
+			}
+
+			if (value.title) {
+				this.domNode.setAttribute('title', value.title);
+			} else {
+				this.domNode.removeAttribute('title');
+			}
 		}
 	}, {
 		key: "formats",

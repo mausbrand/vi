@@ -183,10 +183,13 @@ class LinkBlot extends Quill.import("formats/link")
 		return node;
 	}
 
-	format(name, value)
+	static format(name, value)
 	{
+		if( !value )
+			return;
+
 		super.format(name, value.href); // use value.href here because the super class doesnt support objects
-		
+
 		this.domNode.setAttribute('href', value.href);
 		if (value.target) {
 			this.domNode.setAttribute('target', value.target);
