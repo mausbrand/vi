@@ -30,7 +30,7 @@ class BasicEditorAction(html5.ext.Button):
 		else:
 			self["title"] = self.cmd
 		
-		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd + '.svg" alt="' + self["title"] + '">')
+		self.setText('<img src="/vi/s/icons/actions/text/' + self.cmd.lower() + '.svg" alt="' + self["title"] + '">')
 
 	def getQuill(self):
 		return self.parent().parent().parent().editor.quill
@@ -1038,77 +1038,77 @@ class Wysiwyg( html5.Div ):
 		self.cursorMovedEvent = EventDispatcher("cursorMoved")
 		self.saveTextEvent = EventDispatcher("saveText")
 		self.abortTextEvent = EventDispatcher("abortText")
-		self.textActions1 = ["text.undo",
-							"text.redo",
-							"text.removeformat",
-							"text.flipView",
-							"style.text.alignLeft",
-							"style.text.alignCenter",
-							"style.text.alignRight",
-							"style.text.alignJustify",
-							"text.divider",
-							"text.image",
-							"text.link",
-							"text.table",
-							"text.abort",
-							"text.save"]
-		self.textActions2 = [
-							"style.text.bold",
-							"style.text.italic",
-							"style.text.super",
-							"style.text.sub"]+\
-						   [("style.text.h%s" % x) for x in range(1, 4+1)]+\
-						   ["style.text.blockquote",
-							"text.orderedList",
-							"text.unorderedList",
-							"text.outdent",
-							"text.indent"]
 
-		self.actionbar1 = ActionBar(None, None, actionBarHint)
-		self.actionbar1.removeClass("actionbar")
-		self.actionbar1.addClass("actionbar1")
-		self.actionbar1.setActions( self.textActions1 )
+		self.primaryActions = ActionBar(None, None, actionBarHint)
+		self.primaryActions.removeClass("actionbar")
+		self.primaryActions.setActions([
+			"style.text.bold",
+			"style.text.italic",
+			"style.text.super",
+			"style.text.sub",
+		    "style.text.h1",
+			"style.text.h2",
+			"style.text.h3",
+			"style.text.h4",
+			"|",
+			"text.removeformat",
+			"|",
+			"text.undo",
+			"text.redo",
+			"|",
+			"text.flipView",
+			"|",
+			"text.abort",
+			"text.save"])
 
-		self.actionbar2 = ActionBar(None, None, None)
-		self.actionbar2.removeClass("actionbar")
-		self.actionbar2.addClass("actionbar2")
-		self.actionbar2.setActions( self.textActions2 )
-		
+		self.secondaryActions = ActionBar(None, None, None)
+		self.secondaryActions.removeClass("actionbar")
+		self.secondaryActions.setActions([
+			"style.text.alignLeft",
+			"style.text.alignCenter",
+			"style.text.alignRight",
+			"style.text.alignJustify",
+			"|",
+			"text.outdent",
+			"text.indent",
+			"|",
+			"style.text.blockquote",
+			"text.orderedList",
+			"text.unorderedList",
+			"|",
+			"text.divider",
+			"text.image",
+			"text.link",
+		])
+
+		self.rawCodeActions = ActionBar(None, None, actionBarHint)
+		self.rawCodeActions.hide()
+		self.rawCodeActions.removeClass("actionbar")
+		self.rawCodeActions.setActions(["text.flipView"])
+
 		self.actionbarWrap = html5.Div()
 		self.actionbarWrap.addClass("actionbar")
-		self.actionbarWrap.appendChild( self.actionbar1 )
-		self.actionbarWrap.appendChild( self.actionbar2 )
-		self.appendChild( self.actionbarWrap );
+		self.actionbarWrap.appendChild(self.primaryActions)
+		self.actionbarWrap.appendChild(self.secondaryActions)
+		self.actionbarWrap.appendChild(self.rawCodeActions)
+		self.appendChild(self.actionbarWrap)
 		
 		self.source = html5.form.Textarea()
-		self.source["class"].append("sourceCode")
-		self.source["class"].append("hide")
+		self.source.addClass("sourceCode")
+		self.source.hide()
 		self.appendChild(self.source)
 		
 		self.isWysiwygMode = True
 		self.discardNextClickEvent = False
 		self.editor = Editor(self, editHtml)
 
-		#btn = html5.ext.Button("Apply", self.saveText)
-		#btn["class"].append("icon apply")
-		#self.appendChild( btn )
 		self.currentImage = None
 		self.cursorImage = None
 		self.lastMousePos = None
 		self.sinkEvent("onMouseDown", "onMouseUp", "onMouseMove", "onClick")
 
-		
-		"""
-		self.tableDiv = html5.Div()
-		self.tableDiv["class"].append("tableeditor")
-		self.appendChild(self.tableDiv)
-		for c in [TableInsertRowBeforeAction,TableInsertRowAfterAction,TableInsertColBeforeAction,TableInsertColAfterAction,TableRemoveRowAction,TableRemoveColAction]:
-			self.tableDiv.appendChild( c() )
-		self.tableDiv["style"]["display"]="none"
-		"""
-
 	def flipView(self, *args, **kwargs ):
-		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
+		htmlStr = self.editor.quill.root.innerHTML
 
 		if self.isWysiwygMode:
 			outStr = ""
@@ -1130,7 +1130,6 @@ class Wysiwyg( html5.Div ):
 					indent +=1
 				elif inStr.startswith("</p>"):
 					indent -=1
-					outStr += "\n"
 					outStr += indestStr*indent
 				elif inStr.startswith("<br"):
 					outStr += "\n"
@@ -1176,28 +1175,41 @@ class Wysiwyg( html5.Div ):
 				outStr += inStr[0]
 				inStr = inStr[ 1: ]
 	
-			self.editor.addClass("hide")
-			self.source.removeClass("hide");
-			self.source.element.value = outStr.strip();
-			self.actionbar1.setActions( ["text.flipView"] )
-			self.actionbar2.setActions( [] )
-		else:
-			htmlStr = self.source.element.value
-			htmlStr = re.sub("\n", '', htmlStr)
-			htmlStr = re.sub("&nbsp;", '', htmlStr).strip()
+			self.editor.hide()
+			self.source.show()
 
-			eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML = '%s'" % htmlStr)
-			self.editor.removeClass("hide")
-			self.source.addClass("hide")
-			self.actionbar1.setActions( self.textActions1 )
-			self.actionbar2.setActions( self.textActions2 )
+			self.primaryActions.hide()
+			self.secondaryActions.hide()
+			self.rawCodeActions.show()
+
+			self.source.element.value = outStr.strip()
+
+			#self.actionbar1.setActions(["text.flipView"])
+			#self.actionbar2.setActions([])
+		else:
+			#htmlStr = self.source.element.value
+			#htmlStr = re.sub("\n", '', htmlStr)
+			#htmlStr = re.sub("&nbsp;", '', htmlStr).strip()
+
+			self.editor.quill.root.innerHTML = htmlStr
+			#self.editor.quill.setText(self.source.element.value)
+
+			self.editor.show()
+			self.source.hide()
+
+			self.primaryActions.show()
+			self.secondaryActions.show()
+			self.rawCodeActions.hide()
+
+		#self.actionbar1.setActions(self.textActions1)
+			#self.actionbar2.setActions(self.textActions2)
 
 		self.isWysiwygMode = not self.isWysiwygMode
 		return self.isWysiwygMode
 
 
 	def saveText(self, *args, **kwargs):
-		htmlStr = eval("window.parent.document.getElementsByClassName('ql-editor')[0].innerHTML")
+		htmlStr = self.editor.quill.root.innerHTML
 		self.saveTextEvent.fire(self, htmlStr)
 
 	def abortText(self, *args, **kwargs):
