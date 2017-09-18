@@ -1187,7 +1187,7 @@ class Wysiwyg( html5.Div ):
 			#self.actionbar1.setActions(["text.flipView"])
 			#self.actionbar2.setActions([])
 		else:
-			#htmlStr = self.source.element.value
+			htmlStr = self.source.element.value
 			#htmlStr = re.sub("\n", '', htmlStr)
 			#htmlStr = re.sub("&nbsp;", '', htmlStr).strip()
 
