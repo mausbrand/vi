@@ -149,7 +149,7 @@ class RelationalSingleSelectionBone(html5.Div):
 	"""
 
 	def __init__(self, srcModule, boneName, readOnly, destModule, format="$(dest.name)", required=False,
-	                using = None, usingDescr = None, *args, **kwargs ):
+	                using = None, usingDescr = None, context = None, *args, **kwargs ):
 		"""
 			@param srcModule: Name of the module from which is referenced
 			@type srcModule: string
@@ -177,6 +177,9 @@ class RelationalSingleSelectionBone(html5.Div):
 		self.selectionTxt["readonly"] = True
 		self.appendChild( self.selectionTxt )
 		self.ie = None
+
+		self.baseContext = context
+		self.context = self.baseContext.copy() if self.baseContext else None
 
 		self.changeEvent = EventDispatcher("boneChange")
 
@@ -265,8 +268,22 @@ class RelationalSingleSelectionBone(html5.Div):
 		else:
 			usingDescr = skelStructure[boneName].get("descr", boneName)
 
+		if ("params" in skelStructure[boneName].keys()
+		    and skelStructure[boneName]["params"]
+			and "context" in skelStructure[boneName]["params"].keys()):
+			context = skelStructure[boneName]["params"]["context"]
+		else:
+			context = None
+
 		return cls(moduleName, boneName, readOnly, destModule=destModule,
-		            format=format, required=required, using=using, usingDescr=usingDescr)
+		            format=format, required=required, using=using, usingDescr=usingDescr,
+		            context = context)
+
+	def setContext(self, context):
+		self.context = self.baseContext.copy() if self.baseContext else None
+
+		if context:
+			self.context.update(context)
 
 	def onEdit(self, *args, **kwargs):
 		"""
@@ -280,7 +297,9 @@ class RelationalSingleSelectionBone(html5.Div):
 		conf["mainWindow"].stackPane( pane, focus=True )
 
 		try:
-			edwg = EditWidget(self.destModule, EditWidget.appList, key=self.selection["dest"]["key"])
+			edwg = EditWidget(self.destModule, EditWidget.appList,
+			                    key=self.selection["dest"]["key"],
+			                    context=self.context)
 			pane.addWidget(edwg)
 
 		except AssertionError:
@@ -302,16 +321,16 @@ class RelationalSingleSelectionBone(html5.Div):
 					val = val[0]
 				else:
 					val = None
+
 			if isinstance( val, dict ):
 				self.setSelection( val )
 				if self.using:
 					if self.ie:
 						self.removeChild(self.ie)
 
-					print("2 WITH ", data["rel"])
-
 					self.ie = InternalEdit(self.using, val["rel"], {},
 					                        readOnly=self.readOnly, defaultCat=self.usingDescr)
+
 					self.appendChild( self.ie )
 			else:
 				self.setSelection(None)
@@ -350,7 +369,7 @@ class RelationalSingleSelectionBone(html5.Div):
 		"""
 
 		try:
-			currentSelector = ListWidget( self.destModule, isSelector=True )
+			currentSelector = ListWidget(self.destModule, isSelector=True, context=self.context)
 		except AssertionError:
 			return
 
@@ -386,6 +405,7 @@ class RelationalSingleSelectionBone(html5.Div):
 
 		if selection:
 			NetworkService.request(self.destModule, "view/%s" % selection["dest"]["key"],
+			                        self.context or {},
 			                        successHandler=self.onSelectionDataAvailable, cacheable=True)
 
 			self.selectionTxt["value"] = translate("Loading...")
@@ -393,6 +413,8 @@ class RelationalSingleSelectionBone(html5.Div):
 			if self.using and not self.ie:
 				self.ie = InternalEdit(self.using, getDefaultValues(self.using), {},
 				                        readOnly=self.readOnly, defaultCat=self.usingDescr)
+				self.ie.addClass("relationwrapper")
+
 				self.appendChild(self.ie)
 		else:
 			self.selectionTxt["value"] = ""
@@ -422,8 +444,8 @@ class RelationalSingleSelectionBone(html5.Div):
 		NetworkService.removeChangeListener(self)
 		super(RelationalSingleSelectionBone, self).onDetach()
 
-	def onDataChanged(self, module, **kwargs):
-		if module == self.destModule:
+	def onDataChanged(self, module, key = None, **kwargs):
+		if module == self.destModule and self.selection and key == self.selection["dest"]["key"]:
 			self.setSelection(self.selection)
 
 	def onSelectionDataAvailable(self, req):
@@ -465,7 +487,7 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 			@type data: dict
 		"""
 		super(RelationalMultiSelectionBoneEntry, self).__init__(*args, **kwargs)
-		self.sinkEvent("onDrop", "onDragOver", "onDragStart", "onDragEnd", "onChange")
+		self.sinkEvent("onDrop", "onDragOver", "onDragLeave", "onDragStart", "onDragEnd", "onChange")
 
 		self.parent = parent
 		self.module = module
@@ -473,6 +495,8 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 
 		self.txtLbl = html5.Label()
 		self.txtLbl["draggable"] = not parent.readOnly
+
+		self.addClass("selectioncontainer-entry")
 
 		wrapperDiv = html5.Div()
 		wrapperDiv.appendChild(self.txtLbl)
@@ -490,6 +514,7 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 			self.ie = InternalEdit(using, data["rel"], errorInfo,
 			                        readOnly = parent.readOnly,
 			                        defaultCat = parent.usingDescr)
+			self.ie.addClass("relationwrapper")
 			self.appendChild(self.ie)
 		else:
 			self.ie = None
@@ -528,6 +553,8 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 		if self.parent.readOnly:
 			return
 
+		self.addClass("is-dragging")
+
 		self.parent.currentDrag = self
 		event.dataTransfer.setData("application/json", json.dumps(self.data))
 		event.stopPropagation()
@@ -536,13 +563,32 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 		if self.parent.readOnly:
 			return
 
+		if self.parent.currentDrag is not self:
+			self.addClass("is-dragging-over")
+			self.parent.currentOver = self
+
+		event.preventDefault()
+
+	def onDragLeave(self, event):
+		if self.parent.readOnly:
+			return
+
+		self.removeClass("is-dragging-over")
+		self.parent.currentOver = None
+
 		event.preventDefault()
 
 	def onDragEnd(self, event):
 		if self.parent.readOnly:
 			return
 
+		self.removeClass("is-dragging")
 		self.parent.currentDrag = None
+
+		if self.parent.currentOver:
+			self.parent.currentOver.removeClass("is-dragging-over")
+			self.parent.currentOver = None
+
 		event.stopPropagation()
 
 	def onDrop(self, event):
@@ -579,7 +625,8 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 		conf["mainWindow"].stackPane(pane, focus=True)
 
 		try:
-			edwg = EditWidget(self.parent.destModule, EditWidget.appList, key=self.data["dest"]["key"])
+			edwg = EditWidget(self.parent.destModule, EditWidget.appList, key=self.data["dest"]["key"],
+			                    context=self.parent.context)
 			pane.addWidget(edwg)
 
 		except AssertionError:
@@ -602,13 +649,38 @@ class RelationalMultiSelectionBoneEntry(html5.Div):
 		res["dest"]["key"] = self.data["dest"]["key"]
 		return res
 
+	def onAttach(self):
+		super(RelationalMultiSelectionBoneEntry, self).onAttach()
+		NetworkService.registerChangeListener(self)
+
+	def onDetach(self):
+		NetworkService.removeChangeListener(self)
+		super(RelationalMultiSelectionBoneEntry, self).onDetach()
+
+	def onDataChanged(self, module, key = None, **kwargs):
+		if module != self.parent.destModule or key != self.data["dest"]["key"]:
+			return
+
+		self.update()
+
+	def update(self):
+		NetworkService.request(self.parent.destModule, "view",
+		                        params={"key": self.data["dest"]["key"]},
+		                        successHandler=self.onModuleViewAvailable)
+
+	def onModuleViewAvailable(self, req):
+		answ = NetworkService.decode(req)
+		self.data["dest"] = answ["values"]
+		self.updateLabel()
+
 class RelationalMultiSelectionBone(html5.Div):
 	"""
 		Provides the widget for a relationalBone with multiple=True
 	"""
 
-	def __init__(self, srcModule, boneName, readOnly, destModule, format="$(name)", using=None, usingDescr=None,
-	                relskel=None, *args, **kwargs ):
+	def __init__(self, srcModule, boneName, readOnly, destModule,
+	                format="$(dest.name)", using=None, usingDescr=None,
+	                relskel=None, context = None, *args, **kwargs):
 		"""
 			@param srcModule: Name of the module from which is referenced
 			@type srcModule: string
@@ -621,7 +693,7 @@ class RelationalMultiSelectionBone(html5.Div):
 			@param format: Specifies how entries should be displayed.
 			@type format: string
 		"""
-		super( RelationalMultiSelectionBone,  self ).__init__( *args, **kwargs )
+		super(RelationalMultiSelectionBone, self).__init__(*args, **kwargs)
 
 		self.srcModule = srcModule
 		self.boneName = boneName
@@ -637,9 +709,13 @@ class RelationalMultiSelectionBone(html5.Div):
 		self.entries = []
 		self.extendedErrorInformation = {}
 		self.currentDrag = None
+		self.currentOver = None
+
+		self.baseContext = context
+		self.context = self.baseContext.copy() if self.baseContext else None
 
 		self.selectionDiv = html5.Div()
-		self.selectionDiv["class"].append("selectioncontainer")
+		self.selectionDiv.addClass("selectioncontainer")
 		self.appendChild(self.selectionDiv)
 
 		if (destModule in conf["modules"].keys()
@@ -693,9 +769,16 @@ class RelationalMultiSelectionBone(html5.Div):
 		else:
 			usingDescr = skelStructure[boneName].get("descr", boneName)
 
+		if ("params" in skelStructure[boneName].keys()
+		    and skelStructure[boneName]["params"]
+			and "context" in skelStructure[boneName]["params"].keys()):
+			context = skelStructure[boneName]["params"]["context"]
+		else:
+			context = None
+
 		return cls(moduleName, boneName, readOnly,
 		            destModule=destModule, format=format, using=using, usingDescr = usingDescr,
-		                relskel=skelStructure[boneName].get("relskel"))
+		                relskel=skelStructure[boneName].get("relskel"), context = context)
 
 	def unserialize(self, data):
 		"""
@@ -738,11 +821,17 @@ class RelationalMultiSelectionBone(html5.Div):
 	def serializeForDocument(self):
 		return {self.boneName: [entry.serializeForDocument() for entry in self.entries]}
 
+	def setContext(self, context):
+		self.context = self.baseContext.copy() if self.baseContext else None
+
+		if context:
+			self.context.update(context)
+
 	def onShowSelector(self, *args, **kwargs):
 		"""
-			Opens a ListWidget sothat the user can select new values
+			Opens a ListWidget so that the user can select new values
 		"""
-		currentSelector = ListWidget( self.destModule, isSelector=True )
+		currentSelector = ListWidget(self.destModule, isSelector=True, context=self.context)
 		currentSelector.selectionActivatedEvent.register( self )
 		conf["mainWindow"].stackWidget( currentSelector )
 		self.parent()["class"].append("is_active")
@@ -853,14 +942,13 @@ class RelationalSearch( html5.Div ):
 		self.filterChangedEvent.fire()
 
 	def openSelector(self, *args, **kwargs):
-		currentSelector = ListWidget( self.extension["module"], isSelector=True )
+		currentSelector = ListWidget(self.extension["module"], isSelector=True)
 		currentSelector.selectionActivatedEvent.register( self )
 		conf["mainWindow"].stackWidget( currentSelector )
 
 	def onSelectionActivated(self, table,selection):
 		self.currentSelection = selection
 		self.filterChangedEvent.fire()
-
 
 	def updateFilter(self, filter):
 		if self.currentSelection:

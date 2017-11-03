@@ -8,7 +8,7 @@ LESSC		=	lessc
 
 # Variables
 VI_CUSTOM	= 	../vi_customizing
-OUTPUT		=	$(wildcard ../appengine/)vi
+OUTPUT		=	$(wildcard ../appengine/)$(wildcard ../deploy/)vi
 DEFAULTOPTS	=	-P Mozilla
 DEBUGOPTS	=	$(DEFAULTOPTS) -d
 DEPLOYOPTS	=	$(DEFAULTOPTS) -S --dynamic-link --disable-debug
@@ -48,6 +48,14 @@ version:
 
 $(OUTPUT): 
 	mkdir -p $@
+
+watch: $(OUTPUT) $(MAIN_CSS) version copyfiles
+	$(PYJSBUILD) -o $(OUTPUT) \
+        $(DEBUGOPTS) \
+        --bootloader=bootstrap_progress.js \
+        -I ./$(VI_CUSTOM) \
+		--enable-rebuilds \
+	        main.py
 
 debug: $(OUTPUT) $(MAIN_CSS) version copyfiles
 	@echo "--- STARTING DEBUG BUILD ---"

@@ -12,12 +12,14 @@ from widgets.tooltip import ToolTip
 from widgets.actionbar import ActionBar
 from i18n import translate
 
+from widgets.list import ListWidget
+
 class InvalidBoneValueException(ValueError):
 	pass
 
 class InternalEdit(html5.Div):
 
-	def __init__(self, skelStructure, values=None, errorInformation=None, readOnly=False, defaultCat=""):
+	def __init__(self, skelStructure, values=None, errorInformation=None, readOnly=False, context=None, defaultCat=""):
 		super(InternalEdit, self).__init__()
 
 		self.sinkEvent("onChange", "onKeyDown")
@@ -27,9 +29,9 @@ class InternalEdit(html5.Div):
 		self.values = values
 		self.errorInformation = errorInformation
 		self.defaultCat = defaultCat
+		self.context = context
 
-		self.form = html5.Form()
-		self.appendChild(self.form)
+		self.form = self
 
 		self.renderStructure(readOnly=readOnly)
 
@@ -71,6 +73,10 @@ class InternalEdit(html5.Div):
 				if firstCat:
 					fs["class"].append("active")
 					firstCat = False
+
+					if self.form is self:
+						self.form = html5.Form()
+						self.appendChild(self.form)
 
 				fs["name"] = cat or "empty"
 				legend = html5.Legend()
@@ -119,17 +125,16 @@ class InternalEdit(html5.Div):
 			self.containers[key] = html5.Div()
 			self.containers[key].appendChild(descrLbl)
 			self.containers[key].appendChild(widget)
-
-			if cat is not None:
-				fieldSets[cat]._section.appendChild(self.containers[key])
-			else:
-				self.form.appendChild(self.containers[key])
-
 			self.containers[key].addClass("bone", "bone_%s" % key, bone["type"].replace(".","_"))
 
 			if "." in bone["type"]:
 				for t in bone["type"].split("."):
 					self.containers[key].addClass(t)
+
+			if cat is not None:
+				fieldSets[cat]._section.appendChild(self.containers[key])
+			else:
+				self.form.appendChild(self.containers[key])
 
 			currRow += 1
 			self.bones[key] = widget
@@ -187,6 +192,9 @@ class InternalEdit(html5.Div):
 			Applies the actual data to the bones.
 		"""
 		for bone in self.bones.values():
+			if "setContext" in dir(bone) and callable(bone.setContext):
+				bone.setContext(self.context)
+
 			bone.unserialize(data)
 
 		DeferredCall(self.performLogics)
@@ -308,7 +316,7 @@ class EditWidget(html5.Div):
 	__editIdx_ = 0 #Internal counter to ensure unique ids
 
 	def __init__(self, module, applicationType, key=0, node=None, skelType=None, clone=False,
-	                hashArgs=None, logaction = "Entry saved!", *args, **kwargs):
+	                hashArgs=None, context=None, logaction = "Entry saved!", *args, **kwargs):
 		"""
 			Initialize a new Edit or Add-Widget for the given module.
 			@param module: Name of the module
@@ -317,7 +325,7 @@ class EditWidget(html5.Div):
 			@type applicationType: Any of EditWidget.appList, EditWidget.appHierarchy, EditWidget.appTree or EditWidget.appSingleton
 			@param id: ID of the entry. If none, it will add a new Entry.
 			@type id: Number
-			@param rootNode: If applicationType==EditWidget.appHierarchy, the new entry will be added under this node, if applicationType==EditWidget,appTree the final node is derived from this and the path-parameter. 
+			@param rootNode: If applicationType==EditWidget.appHierarchy, the new entry will be added under this node, if applicationType==EditWidget,appTree the final node is derived from this and the path-parameter.
 			Has no effect if applicationType is not appHierarchy or appTree or if an id have been set.
 			@type rootNode: String
 			@param path: Specifies the path from the rootNode for new entries in a treeApplication
@@ -366,6 +374,9 @@ class EditWidget(html5.Div):
 		self.logaction = logaction
 		self.sinkEvent("onChange")
 
+		self.context = context
+		self.views = {}
+
 		self._lastData = {} #Dict of structure and values received
 
 		if hashArgs:
@@ -383,22 +394,34 @@ class EditWidget(html5.Div):
 
 		self.editTaskID = None
 		self.wasInitialRequest = True #Wherever the last request attempted to save data or just fetched the form
+
+		# Action bar
 		self.actionbar = ActionBar(self.module, self.applicationType, self.mode)
-		self.appendChild( self.actionbar )
+		self.appendChild(self.actionbar)
+
+		if module in conf["modules"] and conf["modules"][module]:
+			editActions = conf["modules"][module].get("editActions", [])
+		else:
+			editActions = []
+
+		if applicationType == EditWidget.appSingleton:
+			self.actionbar.setActions(["save.singleton", "reset"] + editActions)
+		else:
+			self.actionbar.setActions(["save.close", "save.continue", "reset"] + editActions)#
+
+		# Input form
 		self.form = html5.Form()
 		self.appendChild(self.form)
 
-		if applicationType == EditWidget.appSingleton:
-			self.actionbar.setActions(["save.singleton", "reset"])
-		else:
-			self.actionbar.setActions(["save.close", "save.continue", "reset"])
-
+		# Engage
 		self.reloadData()
 
 	def onDetach(self):
 		utils.setPreventUnloading(False)
+		super(EditWidget, self).onDetach()
 
 	def onAttach(self):
+		super(EditWidget, self).onAttach()
 		utils.setPreventUnloading(True)
 
 	def performLogics(self):
@@ -468,10 +491,9 @@ class EditWidget(html5.Div):
 			conf["mainWindow"].removeWidget(self)
 
 	def reloadData(self):
-		self.save( {} )
-		return
+		self.save({})
 
-	def save(self, data ):
+	def save(self, data):
 		"""
 			Creates the actual NetworkService request used to transmit our data.
 			If data is None, it fetches a clean add/edit form.
@@ -479,53 +501,59 @@ class EditWidget(html5.Div):
 			@param data: The values to transmit or None to fetch a new, clean add/edit form.
 			@type data: Dict or None
 		"""
-		self.wasInitialRequest = not len(data)>0
+		self.wasInitialRequest = not len(data) > 0
+
+		if self.context:
+			# Data takes precedence over context.
+			ndata = self.context.copy()
+			ndata.update(data.copy())
+			data = ndata
 
 		if self.module=="_tasks":
 			NetworkService.request(None, "/vi/%s/execute/%s" % (self.module, self.key), data,
-			                        secure=len(data) > 0,
+			                        secure=not self.wasInitialRequest,
 			                        successHandler=self.setData,
 			                        failureHandler=self.showErrorMsg)
 
 		elif self.applicationType == EditWidget.appList: ## Application: List
-			if self.key and (not self.clone or not data):
+			if self.key and (not self.clone or self.wasInitialRequest):
 				NetworkService.request(self.module, "edit/%s" % self.key, data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
 			else:
 				NetworkService.request(self.module, "add", data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg )
 
 		elif self.applicationType == EditWidget.appHierarchy: ## Application: Hierarchy
-			if self.key and (not self.clone or not data):
+			if self.key and (not self.clone or self.wasInitialRequest):
 				NetworkService.request(self.module, "edit/%s" % self.key, data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
 			else:
 				NetworkService.request(self.module, "add/%s" % self.node, data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
 
 		elif self.applicationType == EditWidget.appTree: ## Application: Tree
 			if self.key and not self.clone:
 				NetworkService.request(self.module, "edit/%s/%s" % (self.skelType, self.key), data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
 			else:
 				NetworkService.request(self.module, "add/%s/%s" % (self.skelType, self.node), data,
-				                       secure=len(data) > 0,
+				                       secure=not self.wasInitialRequest,
 				                       successHandler=self.setData,
 				                       failureHandler=self.showErrorMsg)
 
 		elif self.applicationType == EditWidget.appSingleton: ## Application: Singleton
 			NetworkService.request(self.module, "edit", data,
-			                       secure=len(data)>0,
+			                       secure=not self.wasInitialRequest,
 			                       successHandler=self.setData,
 			                       failureHandler=self.showErrorMsg)
 		else:
@@ -614,7 +642,7 @@ class EditWidget(html5.Div):
 			if "values" in data.keys() and "name" in data["values"].keys():
 				spanMsg = html5.Span()
 
-				name = data["values"]["name"]
+				name = data["values"].get("name", data["values"].get("key", ""))
 				if isinstance(name, dict):
 					if conf["currentlanguage"] in name.keys():
 						name = name[conf["currentlanguage"]]
@@ -653,6 +681,7 @@ class EditWidget(html5.Div):
 		#Clear the UI
 		self.clear()
 		self.bones = {}
+		self.views = {}
 		self.containers = {}
 		self.actionbar.resetLoadingState()
 		self.dataCache = data
@@ -662,6 +691,15 @@ class EditWidget(html5.Div):
 		currRow = 0
 		hasMissing = False
 		defaultCat = conf["modules"][self.module].get("visibleName", self.module)
+
+		contextVariable = conf["modules"][self.module].get("editContext")
+		if self.mode == "edit" and contextVariable:
+			if not self.context:
+				self.context = {}
+
+			self.context.update({
+				contextVariable: data["values"].get("key")
+			})
 
 		for key, bone in data["structure"]:
 			if not bone["visible"]:
@@ -694,6 +732,9 @@ class EditWidget(html5.Div):
 			wdgGen = editBoneSelector.select(self.module, key, tmpDict)
 			widget = wdgGen.fromSkelStructure(self.module, key, tmpDict)
 			widget["id"] = "vi_%s_%s_%s_%s_bn_%s" % (self.editIdx, self.module, self.mode, cat, key)
+
+			if "setContext" in dir(widget) and callable(widget.setContext):
+				widget.setContext(self.context)
 
 			#widget["class"].append(key)
 			#widget["class"].append(bone["type"].replace(".","_"))
@@ -746,6 +787,48 @@ class EditWidget(html5.Div):
 			self.form.appendChild( v )
 			v._section = None
 
+		# Views
+		views = conf["modules"][self.module].get("editViews")
+		if self.mode == "edit" and isinstance(views, list):
+			for view in views:
+				vmodule = view.get("module")
+				vvariable = view.get("context")
+
+				if not vmodule:
+					print("Misconfiured view: %s" % view)
+					continue
+
+				if vmodule not in conf["modules"]:
+					print("Module '%s' is not described." % vmodule)
+					continue
+
+				vdescr = conf["modules"][vmodule]
+
+				fs = html5.Fieldset()
+				fs.addClass("inactive")
+
+				fs["name"] = vmodule
+				legend = html5.Legend()
+				fshref = fieldset_A()
+				fshref.appendChild(html5.TextNode(vdescr.get("name", vmodule)))
+				legend.appendChild(fshref)
+				fs.appendChild(legend)
+				section = html5.Section()
+				fs.appendChild(section)
+				fs._section = section
+				fieldSets[vmodule] = fs
+
+				if vvariable:
+					context = self.context.copy()
+					context[vvariable] = data["values"]["key"]
+				else:
+					context = self.context
+
+				self.views[vmodule] = ListWidget(vmodule, filter=vdescr.get("filter", {}), context = context)
+				fs._section.appendChild(self.views[vmodule])
+				self.form.appendChild(fs)
+
+		#print(data["values"])
 		self.unserialize(data["values"])
 
 		if self._hashArgs: #Apply the default values (if any)
@@ -764,6 +847,9 @@ class EditWidget(html5.Div):
 			Applies the actual data to the bones.
 		"""
 		for bone in self.bones.values():
+			if "setContext" in dir(bone) and callable(bone.setContext):
+				bone.setContext(self.context)
+
 			bone.unserialize(data)
 
 	def serializeForPost(self, validityCheck = False):

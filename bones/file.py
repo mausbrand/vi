@@ -154,6 +154,7 @@ class FileViewBoneDelegate(object):
 		return html5.Div()
 
 class FileMultiSelectionBoneEntry(RelationalMultiSelectionBoneEntry):
+
 	def __init__(self, *args, **kwargs):
 		super(FileMultiSelectionBoneEntry, self).__init__(*args, **kwargs)
 		self["class"].append("fileentry")
@@ -177,6 +178,11 @@ class FileMultiSelectionBoneEntry(RelationalMultiSelectionBoneEntry):
 		except AssertionError:
 			conf["mainWindow"].removePane(pane)
 
+	def update(self):
+		NetworkService.request(self.parent.destModule, "view/leaf",
+		                        params={"key": self.data["dest"]["key"]},
+		                        successHandler=self.onModuleViewAvailable)
+
 class FileMultiSelectionBone( RelationalMultiSelectionBone ):
 
 	def __init__(self, *args, **kwargs):
@@ -194,7 +200,7 @@ class FileMultiSelectionBone( RelationalMultiSelectionBone ):
 		event.stopPropagation()
 		files = event.dataTransfer.files
 		for x in range(0,files.length):
-			ul = Uploader(files.item(x), None )
+			ul = Uploader(files.item(x), None, context=self.context)
 			ul.uploadSuccess.register( self )
 
 	def onUploadSuccess(self, uploader, file ):
@@ -263,7 +269,7 @@ class FileSingleSelectionBone( RelationalSingleSelectionBone ):
 			return
 
 		for x in range(0,files.length):
-			ul = Uploader(files.item(x), None )
+			ul = Uploader(files.item(x), None, context = self.context)
 			ul.uploadSuccess.register( self )
 
 	def onUploadSuccess(self, uploader, file):
@@ -328,6 +334,7 @@ class FileSingleSelectionBone( RelationalSingleSelectionBone ):
 			self.previewImg.setImage(utils.getImagePreview(self.selection["dest"]))
 		else:
 			self.previewImg.setImage(None)
+			self.selectionTxt["value"] = ""
 
 		self.updateButtons()
 

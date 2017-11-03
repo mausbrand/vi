@@ -290,6 +290,18 @@ class AdminScreen(Screen):
 		pane.widgetsDomElm["style"]["display"] = "none"
 		#DOM.setStyleAttribute(pane.widgetsDomElm, "display", "none" )
 
+	def insertPane(self, pane, insertAt):
+		if len(pane.childPanes)>0:
+			self._registerChildPanes(pane)
+
+		assert insertAt in self.panes
+
+		self.panes.append(pane)
+		self.moduleListUl.insertBefore(pane, insertAt)
+
+		self.viewport.appendChild(pane.widgetsDomElm)
+		pane.widgetsDomElm["style"]["display"] = "none"
+
 	def stackPane(self, pane, focus=False):
 		assert self.currentPane is not None, "Cannot stack a pane. There's no current one."
 		self.addPane( pane, parentPane=self.currentPane )
@@ -314,6 +326,11 @@ class AdminScreen(Screen):
 
 	def focusPane(self, pane):
 		assert pane in self.panes, "Cannot focus unknown pane!"
+
+		if not pane.focusable:
+			self.topBar.setCurrentModulDescr()
+			return
+
 		#print( pane.descr, self.currentPane.descr if self.currentPane else "(null)" )
 
 		# Click on the same pane?
@@ -330,7 +347,7 @@ class AdminScreen(Screen):
 
 		# Close current Pane
 		if self.currentPane is not None:
-			self.currentPane["class"].remove("is_active")
+			self.currentPane.removeClass("is_active")
 			self.currentPane.widgetsDomElm["style"]["display"] = "none"
 
 		# Focus wanted Pane
@@ -341,7 +358,7 @@ class AdminScreen(Screen):
 		if self.currentPane.collapseable and self.currentPane.childDomElem:
 			self.currentPane.childDomElem["style"]["display"] = "block"
 
-		self.currentPane["class"].append("is_active")
+		self.currentPane.addClass("is_active")
 
 		# Also open parent panes, if not already done
 		pane = self.currentPane.parentPane
